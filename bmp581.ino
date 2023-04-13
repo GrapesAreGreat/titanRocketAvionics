@@ -5,16 +5,17 @@ const int BMP_SAMPLE_RATE = 10; // * 10.24 ms
 BMP581 pressureSensor;
 
 // I2C address selection
-uint8_t i2cAddress = BMP581_I2C_ADDRESS_DEFAULT; // 0x47
-//uint8_t i2cAddress = BMP581_I2C_ADDRESS_SECONDARY; // 0x46
+//uint8_t i2cAddress = BMP581_I2C_ADDRESS_DEFAULT; // 0x47
+uint8_t i2cAddress = BMP581_I2C_ADDRESS_SECONDARY; // 0x46
 
 void bmp581_setup() {
   Wire.begin();
 
-  while (pressureSensor.beginI2C(i2cAddress) != BMP5_OK) {
+  if (pressureSensor.beginI2C(i2cAddress) != BMP5_OK) {
     Serial.println("Failed to connect to BMP581");
+  } else {
+    Serial.println("BMP581 connected!");
   }
-  Serial.println("BMP581 connected!");
 }
 
 bmp5_sensor_data bmp581_single_sample() {

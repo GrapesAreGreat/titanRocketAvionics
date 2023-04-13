@@ -33,24 +33,24 @@ void stop_timer0A() {
 }
 
 void setup() {
-  // Disable all interrupts.
-  cli();
-
   Serial.begin(115200);
   while (!Serial) delay(10);
 
   logger_setup();
   pyro_logic_init();
-  bno_setup();
   bmp581_setup();
-
-  setup_timers();
+  bno_setup();
 
   // We should probably halt logging and close the file
   // once the vehicle is on the ground.
   file = SD.open(data_file_name, FILE_WRITE);
 
-  delay(1000);
+  // Disable all interrupts.
+  cli();
+
+  setup_timers();
+
+  delay(10);
 
   // Enable all interrupts.
   sei();

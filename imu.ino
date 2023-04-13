@@ -26,19 +26,15 @@ const int BNO_SAMPLE_RATE = 10; // * 10.24 ms
 //                                    id, address
 Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28, &Wire);
 
-// Stores a single sample from the sensor.
-bno_data_t data;
-
 void bno_setup() {
-  while (!bno.begin()) {
+  if (!bno.begin()) {
     Serial.println("No BNO055 detected.");
-    delay(1000);
+  } else {
+    Serial.println("BNO055 connected!");
   }
-  Serial.println("BNO055 connected!");
 
   uint8_t system, gyro, accel, mag = 0;
   bno.getCalibration(&system, &gyro, &accel, &mag);
-  Serial.println();
   Serial.print("Calibration: Sys=");
   Serial.print(system);
   Serial.print(" Gyro=");
@@ -48,16 +44,16 @@ void bno_setup() {
   Serial.print(" Mag=");
   Serial.println(mag);
 
-  delay(1000);
+  delay(100);
 }
 
-void bno_single_sample() {
-  bno.getEvent(&data.orientationData, Adafruit_BNO055::VECTOR_EULER);
-  bno.getEvent(&data.angVelocityData, Adafruit_BNO055::VECTOR_GYROSCOPE);
-  bno.getEvent(&data.linearAccelData, Adafruit_BNO055::VECTOR_LINEARACCEL);
-  bno.getEvent(&data.magnetometerData, Adafruit_BNO055::VECTOR_MAGNETOMETER);
-  bno.getEvent(&data.accelerometerData, Adafruit_BNO055::VECTOR_ACCELEROMETER);
-  bno.getEvent(&data.gravityData, Adafruit_BNO055::VECTOR_GRAVITY);
+void bno_single_sample(bno_data_t *data) {
+  bno.getEvent(&data->orientationData, Adafruit_BNO055::VECTOR_EULER);
+  bno.getEvent(&data->angVelocityData, Adafruit_BNO055::VECTOR_GYROSCOPE);
+  bno.getEvent(&data->linearAccelData, Adafruit_BNO055::VECTOR_LINEARACCEL);
+  bno.getEvent(&data->magnetometerData, Adafruit_BNO055::VECTOR_MAGNETOMETER);
+  bno.getEvent(&data->accelerometerData, Adafruit_BNO055::VECTOR_ACCELEROMETER);
+  bno.getEvent(&data->gravityData, Adafruit_BNO055::VECTOR_GRAVITY);
 }
 
 void print_event(sensors_event_t *event, File *file) {
@@ -127,11 +123,15 @@ void bno_log_datum(bno_data_t *data, File *file) {
 
 void bno_logic_tick(void (*on_data_func)(bno_data_t *), File *file) {
   static int bno_ctr = 0;
+
+  // Stores a single sample from the sensor.
+  bno_data_t data;
+  
   if (bno_ctr < BNO_SAMPLE_RATE) {
     bno_ctr++;
   } else {
     bno_ctr = 0;
-    bno_single_sample();
+    bno_single_sample(&data);
     on_data_func(&data);
     bno_log_datum(&data, file);
   }

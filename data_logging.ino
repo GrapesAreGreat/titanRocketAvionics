@@ -2,15 +2,15 @@
 
 #include <SPI.h>
 
-const int CHIP_SELECT_PIN = 5;
+const int CHIP_SELECT_PIN = 16;
 
 void logger_setup() {
   Serial.println("Initializing SD card");
 
-  while (!SD.begin(CHIP_SELECT_PIN)) {
+  if (!SD.begin(CHIP_SELECT_PIN)) {
     Serial.println("Failed to find SD card.");
-    delay(1000);
+  } else {
+    Serial.println("Successfully initialized SD card");
   }
-
-  Serial.println("Successfully initialized SD card");
+  
 }
