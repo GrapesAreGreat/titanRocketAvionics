@@ -7,7 +7,14 @@
 #define TIMER0A_TCCR0A_ENABLE_BITS _BV(COM0A1)
 
 const char *data_file_name = "df.txt";
-static File file;
+const char *start_of_logging_section_str = "start";
+File file;
+
+struct interrupt_flags {
+  bool do_pyro_tick;
+  bool do_bno_tick;
+  bool do_bmp_tick;
+} iflags;
 
 void setup_timers() {
   // TIMER0A Configuration.
@@ -41,10 +48,6 @@ void setup() {
   bmp581_setup();
   bno_setup();
 
-  // We should probably halt logging and close the file
-  // once the vehicle is on the ground.
-  file = SD.open(data_file_name, FILE_WRITE);
-
   // Disable all interrupts.
   cli();
 
@@ -54,6 +57,12 @@ void setup() {
 
   // Enable all interrupts.
   sei();
+
+  file = SD.open(data_file_name, FILE_WRITE);
+  file.println(start_of_logging_section_str);
+  file.flush();
+
+  start_timer0A();
 }
 
 void bmp5_on_data(bmp5_sensor_data *data) {
@@ -64,12 +73,32 @@ void bno_on_data(bno_data_t *data) {
   // Do something with the data :)
 }
 
-void loop() {}
+void loop() {
+  bool did_write_file = false;
+
+  if (iflags.do_pyro_tick) {
+    pyro_logic_tick();
+  }
+
+  if (iflags.do_bmp_tick) {
+    bmp581_logic_tick(bmp5_on_data, &file);
+    did_write_file = true;
+  }
+
+  if (iflags.do_bno_tick) {
+    bno_logic_tick(bno_on_data, &file);
+    did_write_file = true;
+  }
+
+  if (did_write_file) {
+    file.flush();
+  }
+}
 
 // Timer0A compare interrupt service.
 ISR(TIMER0_COMPA_vect) {
   // This interrupt fires approximately every 10.24 ms.
-  pyro_logic_tick();
-  bmp581_logic_tick(bmp5_on_data, &file);
-  bno_logic_tick(bno_on_data, &file);
+  iflags.do_pyro_tick = pyro_should_tick();
+  iflags.do_bmp_tick = bmp581_should_tick();
+  iflags.do_bno_tick = bno_should_tick();
 }

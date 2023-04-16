@@ -1,13 +1,21 @@
 #include "pyro_logic.hpp"
 
-#define DROGUE_PWM_PIN PD5
-#define CHUTE_PWM_PIN PD6
+#define DROGUE_PWM_PIN 5 // PD5
+#define CHUTE_PWM_PIN 6 // PD6
 
 #define DROGUE_TCCR1A_ENABLE_BITS _BV(COM1A1)
 #define CHUTE_TCCR1A_ENABLE_BITS _BV(COM1B1)
 
 #define DROGUE_TCCR1A_ENABLE_BITS _BV(COM1A1)
 #define CHUTE_TCCR1A_ENABLE_BITS _BV(COM1B1)
+
+const int PYRO_LOGIC_SAMPLE_RATE = 10; // * 10.24 ms
+// Offset sample time from other sensors.
+int pyro_logic_ctr = 8;
+
+// Counters for chute duration.
+int drogue_ctr = 0;
+int chute_ctr = 0;
 
 bool drogue_signal_on = false;
 bool chute_signal_on = false;
@@ -35,9 +43,17 @@ void pyro_logic_init() {
   setup_drogue_and_chute_pwm();
 }
 
+bool pyro_should_tick() {
+  if (pyro_logic_ctr < PYRO_LOGIC_SAMPLE_RATE) {
+    pyro_logic_ctr++;
+    return false;
+  } else {
+    pyro_logic_ctr = 0;
+    return true;
+  }
+}
+
 void pyro_logic_tick() {
-  static int drogue_ctr = 0;
-  static int chute_ctr = 0;
 
   // Logic for drogue signal.
   if (drogue_signal_on) {

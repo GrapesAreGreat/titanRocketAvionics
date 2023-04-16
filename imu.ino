@@ -4,6 +4,8 @@
 #include <Adafruit_Sensor.h>
 
 const int BNO_SAMPLE_RATE = 10; // * 10.24 ms
+// Offset sample time from other sensors.
+int bno_logic_ctr = BNO_SAMPLE_RATE / 2;
 
 /* This driver uses the Adafruit unified sensor library (Adafruit_Sensor),
    which provides a common 'type' for sensor data and some helper functions.
@@ -44,7 +46,7 @@ void bno_setup() {
   Serial.print(" Mag=");
   Serial.println(mag);
 
-  delay(100);
+  delay(10);
 }
 
 void bno_single_sample(bno_data_t *data) {
@@ -104,11 +106,11 @@ void print_event(sensors_event_t *event, File *file) {
     file->print("Unk:");
   }
 
-  file->print("\tx= ");
+  file->print(" x= ");
   file->print(x);
-  file->print(" |\ty= ");
+  file->print(" y= ");
   file->print(y);
-  file->print(" |\tz= ");
+  file->print(" z= ");
   file->println(z);
 }
 
@@ -121,18 +123,20 @@ void bno_log_datum(bno_data_t *data, File *file) {
   print_event(&data->gravityData, file);
 }
 
-void bno_logic_tick(void (*on_data_func)(bno_data_t *), File *file) {
-  static int bno_ctr = 0;
+bool bno_should_tick() {
+  if (bno_logic_ctr < BNO_SAMPLE_RATE) {
+    bno_logic_ctr++;
+    return false;
+  } else {
+    bno_logic_ctr = 0;
+    return true;
+  }
+}
 
+void bno_logic_tick(void (*on_data_func)(bno_data_t *), File *file) {
   // Stores a single sample from the sensor.
   bno_data_t data;
-  
-  if (bno_ctr < BNO_SAMPLE_RATE) {
-    bno_ctr++;
-  } else {
-    bno_ctr = 0;
-    bno_single_sample(&data);
-    on_data_func(&data);
-    bno_log_datum(&data, file);
-  }
+  bno_single_sample(&data);
+  on_data_func(&data);
+  bno_log_datum(&data, file);
 }

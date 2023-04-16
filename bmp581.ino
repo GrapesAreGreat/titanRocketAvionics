@@ -1,6 +1,8 @@
 #include "bmp581.hpp"
 
 const int BMP_SAMPLE_RATE = 10; // * 10.24 ms
+// Offset the logic tick from other sensors.
+int bmp_logic_ctr = BMP_SAMPLE_RATE / 5;
 
 BMP581 pressureSensor;
 
@@ -31,21 +33,25 @@ bmp5_sensor_data bmp581_single_sample() {
 }
 
 void bmp581_log_datum(bmp5_sensor_data *data, File *file) {
-    Serial.print("Temperature (C): ");
-    Serial.print(data->temperature);
-    Serial.print("\t\t");
-    Serial.print("Pressure (Pa): ");
-    Serial.println(data->pressure);
+    file->print("C: ");
+    file->print(data->temperature);
+    file->print("\t");
+    file->print("Pa: ");
+    file->println(data->pressure);
+}
+
+bool bmp581_should_tick() {
+  if (bmp_logic_ctr < BMP_SAMPLE_RATE) {
+    bmp_logic_ctr++;
+    return false;
+  } else {
+    bmp_logic_ctr = 0;
+    return true;
+  }
 }
 
 void bmp581_logic_tick(void (*on_data_func)(bmp5_sensor_data *), File *file) {
-  static int bmp_ctr = 0;
-  if (bmp_ctr < BMP_SAMPLE_RATE) {
-    bmp_ctr++;
-  } else {
-    bmp_ctr = 0;
-    bmp5_sensor_data data = bmp581_single_sample();
-    on_data_func(&data);
-    bmp581_log_datum(&data, file);
-  }
+  const bmp5_sensor_data data = bmp581_single_sample();
+  on_data_func(&data);
+  bmp581_log_datum(&data, file);
 }
