@@ -16,6 +16,18 @@ struct interrupt_flags {
   bool do_bmp_tick;
 } iflags;
 
+struct chute_fire_data {
+  char increasing_pressure_values_count;
+  double pressure;
+  double vertical_acceleration;
+} fdata;
+
+bool fresh_bno_data = false;
+bool fresh_bmp_data = false;
+
+bool did_drogue_fire = false;
+bool did_chute_fire = false;
+
 void setup_timers() {
   // TIMER0A Configuration.
   // Timer0 is an 8-bit timer, counting from 0 to 256.
@@ -62,15 +74,55 @@ void setup() {
   file.println(start_of_logging_section_str);
   file.flush();
 
+  // Initialize fdata.
+  fdata.increasing_pressure_values_count = 0;
+  fdata.pressure = 0.0;
+  fdata.vertical_acceleration = 0.0;
+
   start_timer0A();
 }
 
 void bmp5_on_data(bmp5_sensor_data *data) {
-  // Do something with the data :)
+  const double last_pressure = fdata.pressure;
+  const double current_pressure = data->pressure;
+  
+  if (last_pressure < current_pressure) {
+    fdata.increasing_pressure_values_count++;
+  } else {
+    fdata.increasing_pressure_values_count = 0;
+  }
+  
+  fdata.pressure = data->pressure;
 }
 
 void bno_on_data(bno_data_t *data) {
-  // Do something with the data :)
+  fdata.vertical_acceleration = data->accelerometerData.acceleration.x;
+}
+
+void test_if_chutes_fire() {
+  // Testing if drogue chute should fire.
+  const bool acceleration_increased_four_times = fdata.increasing_pressure_values_count >= 4;
+  
+  if (!did_drogue_fire && 
+      ((acceleration_increased_four_times &&
+      fdata.pressure >= 72428.50 &&
+      fdata.vertical_acceleration >= 270.0) || 
+      fdata.pressure <= 26436.76)) 
+  {
+    fire_drogue_signal_on();
+    did_drogue_fire = true;
+  }
+
+  // Testing if main chute should fire.
+  const bool accel_is_downward = fdata.vertical_acceleration < 0.0;
+  
+  if (!did_chute_fire &&
+      accel_is_downward &&
+      fdata.pressure >= 100959.37) 
+  {
+    fire_chute_signal_on();
+    did_chute_fire = true;
+  }
 }
 
 void loop() {
@@ -83,15 +135,21 @@ void loop() {
   if (iflags.do_bmp_tick) {
     bmp581_logic_tick(bmp5_on_data, &file);
     did_write_file = true;
+    fresh_bmp_data = true;
   }
 
   if (iflags.do_bno_tick) {
     bno_logic_tick(bno_on_data, &file);
     did_write_file = true;
+    fresh_bno_data = true;
   }
 
   if (did_write_file) {
     file.flush();
+  }
+
+  if (fresh_bmp_data && fresh_bno_data) {
+    test_if_chutes_fire();
   }
 }
 
