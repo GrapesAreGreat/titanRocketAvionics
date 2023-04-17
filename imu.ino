@@ -6,6 +6,7 @@
 const int BNO_SAMPLE_RATE = 10; // * 10.24 ms
 // Offset sample time from other sensors.
 int bno_logic_ctr = BNO_SAMPLE_RATE / 2;
+char measure_no = 0;
 
 /* This driver uses the Adafruit unified sensor library (Adafruit_Sensor),
    which provides a common 'type' for sensor data and some helper functions.
@@ -49,13 +50,38 @@ void bno_setup() {
   delay(10);
 }
 
-void bno_single_sample(bno_data_t *data) {
-  bno.getEvent(&data->orientationData, Adafruit_BNO055::VECTOR_EULER);
-  bno.getEvent(&data->angVelocityData, Adafruit_BNO055::VECTOR_GYROSCOPE);
-  bno.getEvent(&data->linearAccelData, Adafruit_BNO055::VECTOR_LINEARACCEL);
-  bno.getEvent(&data->magnetometerData, Adafruit_BNO055::VECTOR_MAGNETOMETER);
-  bno.getEvent(&data->accelerometerData, Adafruit_BNO055::VECTOR_ACCELEROMETER);
-  bno.getEvent(&data->gravityData, Adafruit_BNO055::VECTOR_GRAVITY);
+void bno_single_sample(sensors_event_t *data) {
+  auto type = 0;
+  
+  switch (measure_no) {
+    case 0:
+      type = Adafruit_BNO055::VECTOR_ACCELEROMETER;
+      break;
+    case 1:
+      type = Adafruit_BNO055::VECTOR_MAGNETOMETER;
+      break;
+    case 2:
+      type = Adafruit_BNO055::VECTOR_GYROSCOPE;
+      break;
+    case 3:
+      type = Adafruit_BNO055::VECTOR_EULER;
+      break;
+    case 4:
+      type = Adafruit_BNO055::VECTOR_LINEARACCEL;
+      break;
+    case 5:
+      type = Adafruit_BNO055::VECTOR_GRAVITY;
+      break;
+    default:
+      break;
+  }
+  
+  bno.getEvent(data, type);
+
+  measure_no++;
+  if (measure_no == 5) {
+    measure_no = 0;
+  }
 }
 
 void print_event(sensors_event_t *event, File *file) {
@@ -114,13 +140,8 @@ void print_event(sensors_event_t *event, File *file) {
   file->println(z);
 }
 
-void bno_log_datum(bno_data_t *data, File *file) {
-  print_event(&data->orientationData, file);
-  print_event(&data->angVelocityData, file);
-  print_event(&data->linearAccelData, file);
-  print_event(&data->magnetometerData, file);
-  print_event(&data->accelerometerData, file);
-  print_event(&data->gravityData, file);
+void bno_log_datum(sensors_event_t *data, File *file) {
+  print_event(data, file);
 }
 
 bool bno_should_tick() {
@@ -133,10 +154,16 @@ bool bno_should_tick() {
   }
 }
 
-void bno_logic_tick(void (*on_data_func)(bno_data_t *), File *file) {
+void bno_logic_tick(void (*on_data_func)(sensors_event_t *), File *file) {
   // Stores a single sample from the sensor.
-  bno_data_t data;
+  sensors_event_t data;
   bno_single_sample(&data);
-  on_data_func(&data);
+
+  // The action is only to be performed on acceleration.
+  // Please refactor this later.
+  if (measure_no == Adafruit_BNO055::VECTOR_ACCELEROMETER) {
+    on_data_func(&data);
+  }
+  
   bno_log_datum(&data, file);
 }

@@ -46,11 +46,6 @@ void start_timer0A() {
   TCCR0A |= TIMER0A_TCCR0A_ENABLE_BITS;
 }
 
-void stop_timer0A() {
-  Serial.println("Stopping timer 0A");
-  TCCR0A &= ~(TIMER0A_TCCR0A_ENABLE_BITS);
-}
-
 void setup() {
   Serial.begin(115200);
   while (!Serial) delay(10);
@@ -95,8 +90,9 @@ void bmp5_on_data(bmp5_sensor_data *data) {
   fdata.pressure = data->pressure;
 }
 
-void bno_on_data(bno_data_t *data) {
-  fdata.vertical_acceleration = data->accelerometerData.acceleration.x;
+void bno_on_data(sensors_event_t *data) {
+  // This callback only triggers on acceleration data.
+  fdata.vertical_acceleration = data->acceleration.x;
 }
 
 void test_if_chutes_fire() {
@@ -130,18 +126,21 @@ void loop() {
 
   if (iflags.do_pyro_tick) {
     pyro_logic_tick();
+    iflags.do_pyro_tick = false;
   }
 
   if (iflags.do_bmp_tick) {
     bmp581_logic_tick(bmp5_on_data, &file);
     did_write_file = true;
     fresh_bmp_data = true;
+    iflags.do_bmp_tick = false;
   }
 
   if (iflags.do_bno_tick) {
     bno_logic_tick(bno_on_data, &file);
     did_write_file = true;
     fresh_bno_data = true;
+    iflags.do_bno_tick = false;
   }
 
   if (did_write_file) {
@@ -150,6 +149,8 @@ void loop() {
 
   if (fresh_bmp_data && fresh_bno_data) {
     test_if_chutes_fire();
+    fresh_bmp_data = false;
+    fresh_bno_data = false;
   }
 }
 
