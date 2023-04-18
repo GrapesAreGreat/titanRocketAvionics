@@ -16,11 +16,11 @@ void bmp581_setup() {
   Wire.begin();
 
   while (pressureSensor.beginI2C(i2cAddress) != BMP5_OK) {
-    Serial.println("BMP fail");
+    Serial.println(F("BMP fail"));
     pulse_buzzer(2000);
   }
     
-  Serial.println("BMP success");
+  Serial.println(F("BMP success"));
 }
 
 bmp5_sensor_data bmp581_single_sample() {
@@ -28,7 +28,7 @@ bmp5_sensor_data bmp581_single_sample() {
   int8_t err = pressureSensor.getSensorData(&data);
 
   if (err != BMP5_OK) {
-    Serial.print("BMP err ");
+    Serial.print(F("BMP err "));
     Serial.println(err);
   }
 
@@ -40,10 +40,9 @@ void bmp581_log_datum(bmp5_sensor_data *data, File *file) {
       return;  
     }
     
-    file->print("C: ");
+    file->print(F("C: "));
     file->print(data->temperature);
-    file->print(" ");
-    file->print("Pa: ");
+    file->print(F(" Pa: "));
     file->println(data->pressure);
 }
 

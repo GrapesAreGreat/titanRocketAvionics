@@ -9,9 +9,9 @@ void logger_setup() {
   pinMode(CHIP_SELECT_PIN, OUTPUT);
 
   while (!SD.begin(CHIP_SELECT_PIN)) {
-    Serial.println("SD fail");
+    Serial.println(F("SD fail"));
     pulse_buzzer(1000);
   }
   
-  Serial.println("SD success");
+  Serial.println(F("SD success"));
 }

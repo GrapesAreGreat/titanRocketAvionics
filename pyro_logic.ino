@@ -77,25 +77,25 @@ void pyro_logic_tick() {
 }
 
 void fire_drogue_signal_on() {
-  Serial.println("Firing drogue pyro signal");
+  Serial.println(F("Firing drogue pyro signal"));
   TCCR1A |= DROGUE_TCCR1A_ENABLE_BITS;
   drogue_signal_on = true;
 }
 
 void fire_drogue_signal_off() {
-  Serial.println("Stopping drogue pyro signal");
+  Serial.println(F("Stopping drogue pyro signal"));
   TCCR1A &= ~(DROGUE_TCCR1A_ENABLE_BITS);
   drogue_signal_on = false;
 }
 
 void fire_chute_signal_on() {
-  Serial.println("Firing chute pyro signal");
+  Serial.println(F("Firing chute pyro signal"));
   TCCR1A |= CHUTE_TCCR1A_ENABLE_BITS;
   chute_signal_on = true;
 }
 
 void fire_chute_signal_off() {
-  Serial.println("Stopping chute pyro signal");
+  Serial.println(F("Stopping chute pyro signal"));
   TCCR1A &= ~(CHUTE_TCCR1A_ENABLE_BITS);
   chute_signal_on = false;
 }

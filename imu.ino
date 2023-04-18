@@ -12,7 +12,7 @@ typedef enum measure {
   M_GRAVITY = 5
 } measure_t;
 
-const int BNO_SAMPLE_RATE = 7; // * 10.24 ms.
+const int BNO_SAMPLE_RATE = 2; // * 10.24 ms * 6.
 // Offset sample time from other sensors.
 int bno_logic_ctr = 5;
 measure_t measure_no = 0;
@@ -40,21 +40,21 @@ Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28, &Wire);
 
 void bno_setup() {
   while (!bno.begin()) {
-    Serial.println("BNO fail");
+    Serial.println(F("BNO fail"));
     pulse_buzzer(3000);
   }
   
-  Serial.println("BNO success");
+  Serial.println(F("BNO success"));
 
   uint8_t system, gyro, accel, mag = 0;
   bno.getCalibration(&system, &gyro, &accel, &mag);
-  Serial.print("Cal: Sys=");
+  Serial.print(F("Cal: Sys="));
   Serial.print(system);
-  Serial.print(" Gyro=");
+  Serial.print(F(" Gyro="));
   Serial.print(gyro);
-  Serial.print(" Accel=");
+  Serial.print(F(" Accel="));
   Serial.print(accel);
-  Serial.print(" Mag=");
+  Serial.print(F(" Mag="));
   Serial.println(mag);
 
   delay(10);
@@ -96,56 +96,56 @@ void bno_log_event(sensors_event_t *event, File *file) {
   
   double x = -1000000, y = -1000000 , z = -1000000; // Dumb values, easy to spot problem.
   if (event->type == SENSOR_TYPE_ACCELEROMETER) {
-    file->print("Accl:");
+    file->print(F("Accl:"));
     x = event->acceleration.x;
     y = event->acceleration.y;
     z = event->acceleration.z;
   }
   else if (event->type == SENSOR_TYPE_ORIENTATION) {
-    file->print("Orient:");
+    file->print(F("Orient:"));
     x = event->orientation.x;
     y = event->orientation.y;
     z = event->orientation.z;
   }
   else if (event->type == SENSOR_TYPE_MAGNETIC_FIELD) {
-    file->print("Mag:");
+    file->print(F("Mag:"));
     x = event->magnetic.x;
     y = event->magnetic.y;
     z = event->magnetic.z;
   }
   else if (event->type == SENSOR_TYPE_GYROSCOPE) {
-    file->print("Gyro:");
+    file->print(F("Gyro:"));
     x = event->gyro.x;
     y = event->gyro.y;
     z = event->gyro.z;
   }
   else if (event->type == SENSOR_TYPE_ROTATION_VECTOR) {
-    file->print("Rot:");
+    file->print(F("Rot:"));
     x = event->gyro.x;
     y = event->gyro.y;
     z = event->gyro.z;
   }
   else if (event->type == SENSOR_TYPE_LINEAR_ACCELERATION) {
-    file->print("Linear:");
+    file->print(F("Linear:"));
     x = event->acceleration.x;
     y = event->acceleration.y;
     z = event->acceleration.z;
   }
   else if (event->type == SENSOR_TYPE_GRAVITY) {
-    file->print("Gravity:");
+    file->print(F("Gravity:"));
     x = event->acceleration.x;
     y = event->acceleration.y;
     z = event->acceleration.z;
   }
   else {
-    file->print("Unk:");
+    file->print(F("Unk:"));
   }
 
-  file->print(" x= ");
+  file->print(F(" x= "));
   file->print(x);
-  file->print(" y= ");
+  file->print(F(" y= "));
   file->print(y);
-  file->print(" z= ");
+  file->print(F(" z= "));
   file->println(z);
 }
 
@@ -166,7 +166,7 @@ void bno_logic_tick(void (*on_data_func)(sensors_event_t *), File *file) {
 
   // The action is only to be performed on acceleration.
   // Please refactor this later.
-  if (measure_no == M_ACCELEROMETER) {
+  if (measure_no == M_LINEARACCEL) {
     on_data_func(&data);
   }
 

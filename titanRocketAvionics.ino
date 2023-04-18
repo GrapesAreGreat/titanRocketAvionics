@@ -8,10 +8,8 @@
 #define TIMER0A_TCCR0A_ENABLE_BITS _BV(COM0A1)
 
 // Define this to log data through the serial monitor.
-#undef PRINT_VERBOSE 1
+#define PRINT_VERBOSE 1
 
-const char *data_file_name = "df.txt";
-const char *start_of_logging_section_str = "start";
 File file;
 
 #pragma pack(1)
@@ -76,8 +74,8 @@ void setup() {
   // Enable all interrupts.
   sei();
 
-  file = SD.open(data_file_name, FILE_WRITE);
-  file.println(start_of_logging_section_str);
+  file = SD.open(F("data_file.txt"), FILE_WRITE);
+  file.println(F("start"));
   file.flush();
 
   // Initialize fdata.
@@ -100,28 +98,34 @@ void bmp5_on_data(bmp5_sensor_data *data) {
   fdata.last_pressure = data->pressure;
 
   #ifdef PRINT_VERBOSE
-  Serial.print("P: ");
+  Serial.print(F("P: "));
   Serial.print(data->pressure);
-  Serial.print(" Pgt 72428.50: ");
+  Serial.print(F(" P greater than 72428.50: "));
   Serial.print(fdata.pressure_greater_than_72428dot50);
-  Serial.print(" Pgt 100959.37: ");
+  Serial.print(F(" P greater than 100959.37: "));
   Serial.print(fdata.pressure_greater_than_100959dot37);
-  Serial.print(" Plt 26436.76: ");
+  Serial.print(F(" P less than 26436.76: "));
   Serial.print(fdata.pressure_lower_than_26436dot76);
-  Serial.print(" Ipc: ");
+  Serial.print(F(" Increasing P count: "));
   Serial.println((short)fdata.increasing_pressure_values_count);
   #endif
 }
 
 void bno_on_data(sensors_event_t *data) {
   // This callback only triggers on acceleration data.
-  fdata.vertical_acceleration_is_downward = data->acceleration.x < 0.0;
+  fdata.vertical_acceleration_is_downward = data->acceleration.x < -5.0; // Slightly smaller than 0 for better stability at true 0.
   fdata.vertical_acceleration_has_read_at_least_270 = (data->acceleration.x >= 270.0) & fdata.vertical_acceleration_has_read_at_least_270;
 
   #ifdef PRINT_VERBOSE
-  Serial.print("Ad: ");
+  Serial.print(F("Raw Vacc: x="));
+  Serial.print(data->acceleration.x);
+  Serial.print(" y=");
+  Serial.print(data->acceleration.y);
+  Serial.print(" z=");
+  Serial.print(data->acceleration.z);
+  Serial.print(F(" Vacc downward: "));
   Serial.print(fdata.vertical_acceleration_is_downward);
-  Serial.print(" Vagt 270: ");
+  Serial.print(F(" Vacc at least 270: "));
   Serial.println(fdata.vertical_acceleration_has_read_at_least_270);
   #endif
 }
