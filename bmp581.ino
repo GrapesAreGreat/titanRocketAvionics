@@ -57,7 +57,7 @@ bool bmp581_should_tick() {
 }
 
 void bmp581_logic_tick(void (*on_data_func)(bmp5_sensor_data *), File *file) {
-  const bmp5_sensor_data data = bmp581_single_sample();
+  bmp5_sensor_data data = bmp581_single_sample();
   on_data_func(&data);
   bmp581_log_datum(&data, file);
 }

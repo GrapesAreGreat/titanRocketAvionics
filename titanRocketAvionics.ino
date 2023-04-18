@@ -50,7 +50,7 @@ void setup_timers() {
 }
 
 void start_timer0A() {
-  Serial.println("S0A");
+  Serial.println(F("S0A"));
   TCCR0A |= TIMER0A_TCCR0A_ENABLE_BITS;
 }
 
@@ -64,17 +64,14 @@ void setup() {
   bmp581_setup();
   bno_setup();
 
-  // Disable all interrupts.
-  cli();
-
   setup_timers();
 
-  delay(10);
-
-  // Enable all interrupts.
-  sei();
-
-  file = SD.open(F("data_file.txt"), FILE_WRITE);
+  file = SD.open(F("df.txt"), FILE_WRITE);
+  while (!file) {
+    Serial.println(F("Failed to open file"));
+    file = SD.open(F("data_file.txt"), FILE_WRITE);
+    delay(1000);
+  }
   file.println(F("start"));
   file.flush();
 

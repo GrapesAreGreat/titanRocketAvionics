@@ -6,8 +6,6 @@
 #define CHIP_SELECT_PIN 10 // B2
 
 void logger_setup() {
-  pinMode(CHIP_SELECT_PIN, OUTPUT);
-
   while (!SD.begin(CHIP_SELECT_PIN)) {
     Serial.println(F("SD fail"));
     pulse_buzzer(1000);
