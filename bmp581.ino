@@ -2,7 +2,7 @@
 
 #include "buzzer.hpp"
 
-const int BMP_SAMPLE_RATE = 98; // * 10.24 ms
+const int BMP_SAMPLE_RATE = 5; // * 10.24 ms
 // Offset the logic tick from other sensors.
 int bmp_logic_ctr = 2;
 

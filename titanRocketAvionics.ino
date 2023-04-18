@@ -58,6 +58,7 @@ void setup() {
   Serial.begin(115200);
 
   init_buzzer();
+  pulse_buzzer(4000);
 
   logger_setup();
   pyro_logic_init();
@@ -89,7 +90,7 @@ void bmp5_on_data(bmp5_sensor_data *data) {
     fdata.increasing_pressure_values_count = 0;
   }
  
-  fdata.pressure_greater_than_100959dot37 = data->pressure >= 100959.37;
+  fdata.pressure_greater_than_100959dot37 = data->pressure >= 97835.89;
   fdata.last_pressure = data->pressure;
 
   #ifdef PRINT_VERBOSE
@@ -116,7 +117,7 @@ void bno_on_data(sensors_event_t *data) {
   Serial.print(" z=");
   Serial.print(data->acceleration.z);
   Serial.print(F(" Vacc downward: "));
-  Serial.print(fdata.vertical_acceleration_is_downward);
+  Serial.println(fdata.vertical_acceleration_is_downward);
   #endif
 }
 

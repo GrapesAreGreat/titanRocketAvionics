@@ -1,5 +1,7 @@
 #include "pyro_logic.hpp"
 
+#include "buzzer.hpp"
+
 #define DROGUE_PWM_PIN 5 // PD5
 #define CHUTE_PWM_PIN 6 // PD6
 
@@ -60,6 +62,7 @@ void pyro_logic_tick() {
 }
 
 void fire_drogue_signal_on(File *file) {
+  digitalWrite(BUZZER_PIN, HIGH);
   Serial.println(F("Firing drogue pyro signal"));
   file->println(F("Firing drogue pyro signal"));
   analogWrite(DROGUE_PWM_PIN, 77);
@@ -67,12 +70,14 @@ void fire_drogue_signal_on(File *file) {
 }
 
 void fire_drogue_signal_off() {
+  digitalWrite(BUZZER_PIN, LOW);
   Serial.println(F("Stopping drogue pyro signal"));
   analogWrite(DROGUE_PWM_PIN, 0);
   drogue_signal_on = false;
 }
 
 void fire_chute_signal_on(File *file) {
+  digitalWrite(BUZZER_PIN, HIGH);
   Serial.println(F("Firing chute pyro signal"));
   file->println(F("Firing chute pyro signal"));
   analogWrite(CHUTE_PWM_PIN, 77);
@@ -80,6 +85,7 @@ void fire_chute_signal_on(File *file) {
 }
 
 void fire_chute_signal_off() {
+  digitalWrite(BUZZER_PIN, LOW);
   Serial.println(F("Stopping chute pyro signal"));
   analogWrite(CHUTE_PWM_PIN, 0);
   chute_signal_on = false;
