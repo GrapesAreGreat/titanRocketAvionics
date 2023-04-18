@@ -25,7 +25,7 @@ struct interrupt_flags {
 struct chute_fire_data {
   char increasing_pressure_values_count;
   bool vertical_acceleration_is_downward;
-  bool vertical_acceleration_is_greater_than_270;
+  bool vertical_acceleration_has_read_at_least_270;
   bool pressure_greater_than_72428dot50;
   bool pressure_greater_than_100959dot37;
   bool pressure_lower_than_26436dot76;
@@ -116,7 +116,7 @@ void bmp5_on_data(bmp5_sensor_data *data) {
 void bno_on_data(sensors_event_t *data) {
   // This callback only triggers on acceleration data.
   fdata.vertical_acceleration_is_downward = data->acceleration.x < 0.0;
-  fdata.vertical_acceleration_is_greater_than_270 = data->acceleration.x >= 270.0;
+  fdata.vertical_acceleration_has_read_at_least_270 = (data->acceleration.x >= 270.0) & fdata.vertical_acceleration_has_read_at_least_270;
 
   #ifdef PRINT_VERBOSE
   Serial.print("Ad: ");
@@ -134,7 +134,7 @@ void test_if_chutes_fire() {
       (
         (acceleration_increased_four_times && 
          fdata.pressure_greater_than_72428dot50 && 
-         fdata.vertical_acceleration_is_greater_than_270
+         fdata.vertical_acceleration_has_read_at_least_270
         ) 
       || fdata.pressure_lower_than_26436dot76
       )
