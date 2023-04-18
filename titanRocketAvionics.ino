@@ -146,6 +146,7 @@ void test_if_chutes_fire() {
 
   // Testing if main chute should fire.  
   if (!did_chute_fire &&
+      did_drogue_fire &&
       fdata.vertical_acceleration_is_downward &&
       fdata.pressure_greater_than_100959dot37
      ) 
