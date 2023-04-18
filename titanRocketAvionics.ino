@@ -122,7 +122,7 @@ void bno_on_data(sensors_event_t *data) {
   Serial.print("Ad: ");
   Serial.print(fdata.vertical_acceleration_is_downward);
   Serial.print(" Vagt 270: ");
-  Serial.println(fdata.vertical_acceleration_is_greater_than_270);
+  Serial.println(fdata.vertical_acceleration_has_read_at_least_270);
   #endif
 }
 
