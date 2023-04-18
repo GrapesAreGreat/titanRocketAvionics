@@ -1,8 +1,10 @@
 #include "bmp581.hpp"
 
-const int BMP_SAMPLE_RATE = 10; // * 10.24 ms
+#include "buzzer.hpp"
+
+const int BMP_SAMPLE_RATE = 98; // * 10.24 ms
 // Offset the logic tick from other sensors.
-int bmp_logic_ctr = BMP_SAMPLE_RATE / 5;
+int bmp_logic_ctr = 2;
 
 BMP581 pressureSensor;
 
@@ -13,11 +15,12 @@ uint8_t i2cAddress = BMP581_I2C_ADDRESS_SECONDARY; // 0x46
 void bmp581_setup() {
   Wire.begin();
 
-  if (pressureSensor.beginI2C(i2cAddress) != BMP5_OK) {
-    Serial.println("Failed to connect to BMP581");
-  } else {
-    Serial.println("BMP581 connected!");
+  while (pressureSensor.beginI2C(i2cAddress) != BMP5_OK) {
+    Serial.println("BMP fail");
+    pulse_buzzer(2000);
   }
+    
+  Serial.println("BMP success");
 }
 
 bmp5_sensor_data bmp581_single_sample() {
@@ -25,7 +28,7 @@ bmp5_sensor_data bmp581_single_sample() {
   int8_t err = pressureSensor.getSensorData(&data);
 
   if (err != BMP5_OK) {
-    Serial.print("Error getting data from BMP581: ");
+    Serial.print("BMP err ");
     Serial.println(err);
   }
 
@@ -33,9 +36,13 @@ bmp5_sensor_data bmp581_single_sample() {
 }
 
 void bmp581_log_datum(bmp5_sensor_data *data, File *file) {
+    if (data == NULL || file == NULL) {
+      return;  
+    }
+    
     file->print("C: ");
     file->print(data->temperature);
-    file->print("\t");
+    file->print(" ");
     file->print("Pa: ");
     file->println(data->pressure);
 }

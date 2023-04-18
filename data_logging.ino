@@ -1,17 +1,17 @@
 #include "data_logging.hpp"
 
 #include <SPI.h>
+#include "buzzer.hpp"
 
-const int CHIP_SELECT_PIN = 10;
+#define CHIP_SELECT_PIN 10 // B2
 
 void logger_setup() {
-  Serial.println("Initializing SD card");
-
   pinMode(CHIP_SELECT_PIN, OUTPUT);
 
-  if (!SD.begin(CHIP_SELECT_PIN)) {
-    Serial.println("Failed to find SD card.");
-  } else {
-    Serial.println("Successfully initialized SD card");
+  while (!SD.begin(CHIP_SELECT_PIN)) {
+    Serial.println("SD fail");
+    pulse_buzzer(1000);
   }
+  
+  Serial.println("SD success");
 }

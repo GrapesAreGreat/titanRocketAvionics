@@ -3,10 +3,19 @@
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
 
-const int BNO_SAMPLE_RATE = 10; // * 10.24 ms
+typedef enum measure {
+  M_ACCELEROMETER = 0,
+  M_MAGNETOMETER = 1,
+  M_GYROSCOPE = 2,
+  M_EULER = 3,
+  M_LINEARACCEL = 4,
+  M_GRAVITY = 5
+} measure_t;
+
+const int BNO_SAMPLE_RATE = 7; // * 10.24 ms.
 // Offset sample time from other sensors.
-int bno_logic_ctr = BNO_SAMPLE_RATE / 2;
-char measure_no = 0;
+int bno_logic_ctr = 5;
+measure_t measure_no = 0;
 
 /* This driver uses the Adafruit unified sensor library (Adafruit_Sensor),
    which provides a common 'type' for sensor data and some helper functions.
@@ -30,15 +39,16 @@ char measure_no = 0;
 Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28, &Wire);
 
 void bno_setup() {
-  if (!bno.begin()) {
-    Serial.println("No BNO055 detected.");
-  } else {
-    Serial.println("BNO055 connected!");
+  while (!bno.begin()) {
+    Serial.println("BNO fail");
+    pulse_buzzer(3000);
   }
+  
+  Serial.println("BNO success");
 
   uint8_t system, gyro, accel, mag = 0;
   bno.getCalibration(&system, &gyro, &accel, &mag);
-  Serial.print("Calibration: Sys=");
+  Serial.print("Cal: Sys=");
   Serial.print(system);
   Serial.print(" Gyro=");
   Serial.print(gyro);
@@ -54,22 +64,22 @@ void bno_single_sample(sensors_event_t *data) {
   auto type = 0;
   
   switch (measure_no) {
-    case 0:
+    case M_ACCELEROMETER:
       type = Adafruit_BNO055::VECTOR_ACCELEROMETER;
       break;
-    case 1:
+    case M_MAGNETOMETER:
       type = Adafruit_BNO055::VECTOR_MAGNETOMETER;
       break;
-    case 2:
+    case M_GYROSCOPE:
       type = Adafruit_BNO055::VECTOR_GYROSCOPE;
       break;
-    case 3:
+    case M_EULER:
       type = Adafruit_BNO055::VECTOR_EULER;
       break;
-    case 4:
+    case M_LINEARACCEL:
       type = Adafruit_BNO055::VECTOR_LINEARACCEL;
       break;
-    case 5:
+    case M_GRAVITY:
       type = Adafruit_BNO055::VECTOR_GRAVITY;
       break;
     default:
@@ -77,14 +87,13 @@ void bno_single_sample(sensors_event_t *data) {
   }
   
   bno.getEvent(data, type);
-
-  measure_no++;
-  if (measure_no == 5) {
-    measure_no = 0;
-  }
 }
 
-void print_event(sensors_event_t *event, File *file) {
+void bno_log_event(sensors_event_t *event, File *file) {
+  if (event == NULL || file == NULL) {
+    return;
+  }
+  
   double x = -1000000, y = -1000000 , z = -1000000; // Dumb values, easy to spot problem.
   if (event->type == SENSOR_TYPE_ACCELEROMETER) {
     file->print("Accl:");
@@ -140,10 +149,6 @@ void print_event(sensors_event_t *event, File *file) {
   file->println(z);
 }
 
-void bno_log_datum(sensors_event_t *data, File *file) {
-  print_event(data, file);
-}
-
 bool bno_should_tick() {
   if (bno_logic_ctr < BNO_SAMPLE_RATE) {
     bno_logic_ctr++;
@@ -161,9 +166,14 @@ void bno_logic_tick(void (*on_data_func)(sensors_event_t *), File *file) {
 
   // The action is only to be performed on acceleration.
   // Please refactor this later.
-  if (measure_no == Adafruit_BNO055::VECTOR_ACCELEROMETER) {
+  if (measure_no == M_ACCELEROMETER) {
     on_data_func(&data);
   }
+
+  measure_no = measure_no + 1;
+  if (measure_no == M_GRAVITY) {
+    measure_no = 0;
+  }
   
-  bno_log_datum(&data, file);
+  bno_log_event(&data, file);
 }

@@ -3,23 +3,33 @@
 #include "pyro_logic.hpp"
 #include "imu.hpp"
 #include "data_logging.hpp"
+#include "buzzer.hpp"
 
 #define TIMER0A_TCCR0A_ENABLE_BITS _BV(COM0A1)
+
+// Define this to log data through the serial monitor.
+#undef PRINT_VERBOSE 1
 
 const char *data_file_name = "df.txt";
 const char *start_of_logging_section_str = "start";
 File file;
 
+#pragma pack(1)
 struct interrupt_flags {
   bool do_pyro_tick;
   bool do_bno_tick;
   bool do_bmp_tick;
 } iflags;
 
+#pragma pack(1)
 struct chute_fire_data {
   char increasing_pressure_values_count;
-  double pressure;
-  double vertical_acceleration;
+  bool vertical_acceleration_is_downward;
+  bool vertical_acceleration_is_greater_than_270;
+  bool pressure_greater_than_72428dot50;
+  bool pressure_greater_than_100959dot37;
+  bool pressure_lower_than_26436dot76;
+  double last_pressure;
 } fdata;
 
 bool fresh_bno_data = false;
@@ -42,13 +52,14 @@ void setup_timers() {
 }
 
 void start_timer0A() {
-  Serial.println("Starting timer 0A");
+  Serial.println("S0A");
   TCCR0A |= TIMER0A_TCCR0A_ENABLE_BITS;
 }
 
 void setup() {
   Serial.begin(115200);
-  while (!Serial) delay(10);
+
+  init_buzzer();
 
   logger_setup();
   pyro_logic_init();
@@ -71,28 +82,48 @@ void setup() {
 
   // Initialize fdata.
   fdata.increasing_pressure_values_count = 0;
-  fdata.pressure = 0.0;
-  fdata.vertical_acceleration = 0.0;
+  fdata.last_pressure = 101325.0;
 
   start_timer0A();
 }
 
 void bmp5_on_data(bmp5_sensor_data *data) {
-  const double last_pressure = fdata.pressure;
-  const double current_pressure = data->pressure;
-  
-  if (last_pressure < current_pressure) {
+  if (fdata.last_pressure < data->pressure) {
     fdata.increasing_pressure_values_count++;
   } else {
     fdata.increasing_pressure_values_count = 0;
   }
-  
-  fdata.pressure = data->pressure;
+ 
+  fdata.pressure_greater_than_72428dot50 = data->pressure >= 72428.50;
+  fdata.pressure_greater_than_100959dot37 = data->pressure >= 100959.37;
+  fdata.pressure_lower_than_26436dot76 = data->pressure <= 26436.76;
+  fdata.last_pressure = data->pressure;
+
+  #ifdef PRINT_VERBOSE
+  Serial.print("P: ");
+  Serial.print(data->pressure);
+  Serial.print(" Pgt 72428.50: ");
+  Serial.print(fdata.pressure_greater_than_72428dot50);
+  Serial.print(" Pgt 100959.37: ");
+  Serial.print(fdata.pressure_greater_than_100959dot37);
+  Serial.print(" Plt 26436.76: ");
+  Serial.print(fdata.pressure_lower_than_26436dot76);
+  Serial.print(" Ipc: ");
+  Serial.println((short)fdata.increasing_pressure_values_count);
+  #endif
 }
 
 void bno_on_data(sensors_event_t *data) {
   // This callback only triggers on acceleration data.
-  fdata.vertical_acceleration = data->acceleration.x;
+  fdata.vertical_acceleration_is_downward = data->acceleration.x < 0.0;
+  fdata.vertical_acceleration_is_greater_than_270 = data->acceleration.x >= 270.0;
+
+  #ifdef PRINT_VERBOSE
+  Serial.print("Ad: ");
+  Serial.print(fdata.vertical_acceleration_is_downward);
+  Serial.print(" Vagt 270: ");
+  Serial.println(fdata.vertical_acceleration_is_greater_than_270);
+  #endif
 }
 
 void test_if_chutes_fire() {
@@ -100,21 +131,24 @@ void test_if_chutes_fire() {
   const bool acceleration_increased_four_times = fdata.increasing_pressure_values_count >= 4;
   
   if (!did_drogue_fire && 
-      ((acceleration_increased_four_times &&
-      fdata.pressure >= 72428.50 &&
-      fdata.vertical_acceleration >= 270.0) || 
-      fdata.pressure <= 26436.76)) 
+      (
+        (acceleration_increased_four_times && 
+         fdata.pressure_greater_than_72428dot50 && 
+         fdata.vertical_acceleration_is_greater_than_270
+        ) 
+      || fdata.pressure_lower_than_26436dot76
+      )
+     ) 
   {
     fire_drogue_signal_on();
     did_drogue_fire = true;
   }
 
-  // Testing if main chute should fire.
-  const bool accel_is_downward = fdata.vertical_acceleration < 0.0;
-  
+  // Testing if main chute should fire.  
   if (!did_chute_fire &&
-      accel_is_downward &&
-      fdata.pressure >= 100959.37) 
+      fdata.vertical_acceleration_is_downward &&
+      fdata.pressure_greater_than_100959dot37
+     ) 
   {
     fire_chute_signal_on();
     did_chute_fire = true;
@@ -143,14 +177,14 @@ void loop() {
     iflags.do_bno_tick = false;
   }
 
-  if (did_write_file) {
-    file.flush();
-  }
-
   if (fresh_bmp_data && fresh_bno_data) {
     test_if_chutes_fire();
     fresh_bmp_data = false;
     fresh_bno_data = false;
+  }
+
+  if (did_write_file && file) {
+    file.flush();
   }
 }
 
