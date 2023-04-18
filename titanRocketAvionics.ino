@@ -7,6 +7,9 @@
 
 #define TIMER0A_TCCR0A_ENABLE_BITS _BV(COM0A1)
 
+// 69980.62 PA (9889.63ft) - 70000 PA (9882.37ft) = -19.38 PA
+#define PRESSURE_DELTA (-19.38)
+
 // Define this to log data through the serial monitor.
 #define PRINT_VERBOSE 1
 
@@ -23,10 +26,7 @@ struct interrupt_flags {
 struct chute_fire_data {
   char increasing_pressure_values_count;
   bool vertical_acceleration_is_downward;
-  bool vertical_acceleration_has_read_at_least_270;
-  bool pressure_greater_than_72428dot50;
   bool pressure_greater_than_100959dot37;
-  bool pressure_lower_than_26436dot76;
   double last_pressure;
 } fdata;
 
@@ -83,15 +83,13 @@ void setup() {
 }
 
 void bmp5_on_data(bmp5_sensor_data *data) {
-  if (fdata.last_pressure < data->pressure) {
+  if (fdata.last_pressure - data->pressure < PRESSURE_DELTA) {
     fdata.increasing_pressure_values_count++;
   } else {
     fdata.increasing_pressure_values_count = 0;
   }
  
-  fdata.pressure_greater_than_72428dot50 = data->pressure >= 72428.50;
   fdata.pressure_greater_than_100959dot37 = data->pressure >= 100959.37;
-  fdata.pressure_lower_than_26436dot76 = data->pressure <= 26436.76;
   fdata.last_pressure = data->pressure;
 
   #ifdef PRINT_VERBOSE
@@ -111,7 +109,6 @@ void bmp5_on_data(bmp5_sensor_data *data) {
 void bno_on_data(sensors_event_t *data) {
   // This callback only triggers on acceleration data.
   fdata.vertical_acceleration_is_downward = data->acceleration.x < -5.0; // Slightly smaller than 0 for better stability at true 0.
-  fdata.vertical_acceleration_has_read_at_least_270 = (data->acceleration.x >= 270.0) & fdata.vertical_acceleration_has_read_at_least_270;
 
   #ifdef PRINT_VERBOSE
   Serial.print(F("Raw Vacc: x="));
@@ -129,19 +126,11 @@ void bno_on_data(sensors_event_t *data) {
 
 void test_if_chutes_fire() {
   // Testing if drogue chute should fire.
-  const bool acceleration_increased_four_times = fdata.increasing_pressure_values_count >= 4;
+  const bool pressure_increased_eight_times = fdata.increasing_pressure_values_count >= 8;
   
-  if (!did_drogue_fire && 
-      (
-        (acceleration_increased_four_times && 
-         fdata.pressure_greater_than_72428dot50 && 
-         fdata.vertical_acceleration_has_read_at_least_270
-        ) 
-      || fdata.pressure_lower_than_26436dot76
-      )
-     ) 
+  if (!did_drogue_fire && pressure_increased_eight_times) 
   {
-    fire_drogue_signal_on();
+    fire_drogue_signal_on(&file);
     did_drogue_fire = true;
   }
 
@@ -152,7 +141,7 @@ void test_if_chutes_fire() {
       fdata.pressure_greater_than_100959dot37
      ) 
   {
-    fire_chute_signal_on();
+    fire_chute_signal_on(&file);
     did_chute_fire = true;
   }
 }

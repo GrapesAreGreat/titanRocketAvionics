@@ -3,6 +3,8 @@
 #include <SPI.h>
 #include "buzzer.hpp"
 
+#include "pyro_logic.hpp"
+
 #define CHIP_SELECT_PIN 10 // B2
 
 void logger_setup() {
