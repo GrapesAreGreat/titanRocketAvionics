@@ -96,11 +96,9 @@ void bmp5_on_data(bmp5_sensor_data *data) {
   Serial.print(F("P: "));
   Serial.print(data->pressure);
   Serial.print(F(" P greater than 72428.50: "));
-  Serial.print(fdata.pressure_greater_than_72428dot50);
   Serial.print(F(" P greater than 100959.37: "));
   Serial.print(fdata.pressure_greater_than_100959dot37);
   Serial.print(F(" P less than 26436.76: "));
-  Serial.print(fdata.pressure_lower_than_26436dot76);
   Serial.print(F(" Increasing P count: "));
   Serial.println((short)fdata.increasing_pressure_values_count);
   #endif
@@ -108,7 +106,7 @@ void bmp5_on_data(bmp5_sensor_data *data) {
 
 void bno_on_data(sensors_event_t *data) {
   // This callback only triggers on acceleration data.
-  fdata.vertical_acceleration_is_downward = data->acceleration.x < -5.0; // Slightly smaller than 0 for better stability at true 0.
+  fdata.vertical_acceleration_is_downward = data->acceleration.x < -0.7; // Slightly smaller than 0 for better stability at true 0.
 
   #ifdef PRINT_VERBOSE
   Serial.print(F("Raw Vacc: x="));
@@ -119,8 +117,6 @@ void bno_on_data(sensors_event_t *data) {
   Serial.print(data->acceleration.z);
   Serial.print(F(" Vacc downward: "));
   Serial.print(fdata.vertical_acceleration_is_downward);
-  Serial.print(F(" Vacc at least 270: "));
-  Serial.println(fdata.vertical_acceleration_has_read_at_least_270);
   #endif
 }
 
@@ -137,8 +133,7 @@ void test_if_chutes_fire() {
   // Testing if main chute should fire.  
   if (!did_chute_fire &&
       did_drogue_fire &&
-      fdata.vertical_acceleration_is_downward &&
-      fdata.pressure_greater_than_100959dot37
+      fdata.pressure_greater_than_100959dot37 // 1000ft or lower.
      ) 
   {
     fire_chute_signal_on(&file);
