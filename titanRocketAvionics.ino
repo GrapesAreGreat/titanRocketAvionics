@@ -13,8 +13,8 @@
 // Define this to log data through the serial monitor.
 #undef PRINT_VERBOSE 1
 
-// Mojave new area elevation is 740 m (2428ft) ~ 92886.61
-// Addition of 1000ft for elevation of 3428ft ~ 66375.88
+// Mojave new area elevation is 740 m (2428ft) ~ 92744.77
+// Addition of 1000ft for elevation of 3428ft ~ 89386.67
 #define PA_ABOVE_1000_FT_PLUS_GROUND_LEVEL 89386.67
 
 File file;
