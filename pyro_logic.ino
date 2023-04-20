@@ -5,10 +5,6 @@
 #define DROGUE_PWM_PIN 5 // PD5
 #define CHUTE_PWM_PIN 6 // PD6
 
-const int PYRO_LOGIC_SAMPLE_RATE = 10; // * 10.24 ms
-// Offset sample time from other sensors.
-int pyro_logic_ctr = 8;
-
 // Counters for chute duration.
 int drogue_ctr = 0;
 int chute_ctr = 0;
@@ -16,8 +12,8 @@ int chute_ctr = 0;
 bool drogue_signal_on = false;
 bool chute_signal_on = false;
 
-const int drogue_signal_duration = 10; // * 10.24 ms.
-const int chute_signal_duration = 10; // * 10.24 ms.
+const int drogue_signal_duration = 198; // * 10.24 ms.
+const int chute_signal_duration = 198; // * 10.24 ms.
 
 void setup_drogue_and_chute_pwm() {
   pinMode(DROGUE_PWM_PIN, OUTPUT);
@@ -26,16 +22,6 @@ void setup_drogue_and_chute_pwm() {
 
 void pyro_logic_init() {
   setup_drogue_and_chute_pwm();
-}
-
-bool pyro_should_tick() {
-  if (pyro_logic_ctr < PYRO_LOGIC_SAMPLE_RATE) {
-    pyro_logic_ctr++;
-    return false;
-  } else {
-    pyro_logic_ctr = 0;
-    return true;
-  }
 }
 
 void pyro_logic_tick() {

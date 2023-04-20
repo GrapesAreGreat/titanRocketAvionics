@@ -5,13 +5,17 @@
 #include "data_logging.hpp"
 #include "buzzer.hpp"
 
-#define TIMER0A_TCCR0A_ENABLE_BITS _BV(COM0A1)
+#define TIMER2A_TCCR2A_ENABLE_BITS _BV(COM2A1)
 
 // 69980.62 PA (9889.63ft) - 70000 PA (9882.37ft) = -19.38 PA
 #define PRESSURE_DELTA (-19.38)
 
 // Define this to log data through the serial monitor.
-#define PRINT_VERBOSE 1
+#undef PRINT_VERBOSE 1
+
+// Mojave new area elevation is 740 m (2428ft) ~ 92886.61
+// Addition of 1000ft for elevation of 3428ft ~ 66375.88
+#define PA_ABOVE_1000_FT_PLUS_GROUND_LEVEL 89386.67
 
 File file;
 
@@ -26,7 +30,7 @@ struct interrupt_flags {
 struct chute_fire_data {
   char increasing_pressure_values_count;
   bool vertical_acceleration_is_downward;
-  bool pressure_greater_than_100959dot37;
+  bool pressure_greater_than_ground_plus_1000_ft;
   double last_pressure;
 } fdata;
 
@@ -37,28 +41,28 @@ bool did_drogue_fire = false;
 bool did_chute_fire = false;
 
 void setup_timers() {
-  // TIMER0A Configuration.
-  // Timer0 is an 8-bit timer, counting from 0 to 256.
-  TCCR0A = 0;
-  // Prescale by 256.
-  TCCR0B = _BV(CS02) | _BV(CS00); // Frequency = 16 MHz / 1024 = 15625 Hz
-  // Enable local interrupt to OCIE1A.
-  TIMSK0 = _BV(OCIE0A);
+  // TIMER2A Configuration.
+  // Timer2 is an 8-bit timer, counting from 0 to 256.
+  TCCR2A = 0;
+  // Prescale by 1024.
+  TCCR2B = _BV(CS22) | _BV(CS21) | _BV(CS20); // Frequency = 16 MHz / 1024 = 15625 Hz
+  // Enable local interrupt to OCIE2A.
+  TIMSK2 = _BV(OCIE2A);
   // Set the compare match register value.
   // 0.064 ms period * 16 = 1.024 ms * 10 = 10.24 ms.
-  OCR0A = 160;
+  OCR2A = 160;
 }
 
 void start_timer0A() {
-  Serial.println(F("S0A"));
-  TCCR0A |= TIMER0A_TCCR0A_ENABLE_BITS;
+  Serial.println(F("S2A"));
+  TCCR2A |= TIMER2A_TCCR2A_ENABLE_BITS;
 }
 
 void setup() {
   Serial.begin(115200);
 
   init_buzzer();
-  pulse_buzzer(4000);
+  pulse_buzzer(1000);
 
   logger_setup();
   pyro_logic_init();
@@ -90,7 +94,7 @@ void bmp5_on_data(bmp5_sensor_data *data) {
     fdata.increasing_pressure_values_count = 0;
   }
  
-  fdata.pressure_greater_than_100959dot37 = data->pressure >= 97835.89;
+  fdata.pressure_greater_than_ground_plus_1000_ft = data->pressure >= PA_ABOVE_1000_FT_PLUS_GROUND_LEVEL;
   fdata.last_pressure = data->pressure;
 
   #ifdef PRINT_VERBOSE
@@ -98,7 +102,7 @@ void bmp5_on_data(bmp5_sensor_data *data) {
   Serial.print(data->pressure);
   Serial.print(F(" P greater than 72428.50: "));
   Serial.print(F(" P greater than 100959.37: "));
-  Serial.print(fdata.pressure_greater_than_100959dot37);
+  Serial.print(fdata.pressure_greater_than_ground_plus_1000_ft);
   Serial.print(F(" P less than 26436.76: "));
   Serial.print(F(" Increasing P count: "));
   Serial.println((short)fdata.increasing_pressure_values_count);
@@ -134,7 +138,7 @@ void test_if_chutes_fire() {
   // Testing if main chute should fire.  
   if (!did_chute_fire &&
       did_drogue_fire &&
-      fdata.pressure_greater_than_100959dot37 // 1000ft or lower.
+      fdata.pressure_greater_than_ground_plus_1000_ft
      ) 
   {
     fire_chute_signal_on(&file);
@@ -143,7 +147,7 @@ void test_if_chutes_fire() {
 }
 
 void loop() {
-  bool did_write_file = false;
+  const bool did_write_file = iflags.do_bmp_tick | iflags.do_bno_tick;
 
   if (iflags.do_pyro_tick) {
     pyro_logic_tick();
@@ -152,14 +156,12 @@ void loop() {
 
   if (iflags.do_bmp_tick) {
     bmp581_logic_tick(bmp5_on_data, &file);
-    did_write_file = true;
     fresh_bmp_data = true;
     iflags.do_bmp_tick = false;
   }
 
   if (iflags.do_bno_tick) {
     bno_logic_tick(bno_on_data, &file);
-    did_write_file = true;
     fresh_bno_data = true;
     iflags.do_bno_tick = false;
   }
@@ -176,9 +178,9 @@ void loop() {
 }
 
 // Timer0A compare interrupt service.
-ISR(TIMER0_COMPA_vect) {
+ISR(TIMER2_COMPA_vect) {
   // This interrupt fires approximately every 10.24 ms.
-  iflags.do_pyro_tick = pyro_should_tick();
+  iflags.do_pyro_tick = true;
   iflags.do_bmp_tick = bmp581_should_tick();
   iflags.do_bno_tick = bno_should_tick();
 }
