@@ -3,15 +3,6 @@
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
 
-typedef enum measure {
-  M_ACCELEROMETER = 0,
-  M_MAGNETOMETER = 1,
-  M_GYROSCOPE = 2,
-  M_EULER = 3,
-  M_LINEARACCEL = 4,
-  M_GRAVITY = 5
-} measure_t;
-
 const int BNO_SAMPLE_RATE = 2; // * 10.24 ms * 6.
 // Offset sample time from other sensors.
 int bno_logic_ctr = 5;
@@ -159,16 +150,12 @@ bool bno_should_tick() {
   }
 }
 
-void bno_logic_tick(void (*on_data_func)(sensors_event_t *), File *file) {
+void bno_logic_tick(void (*on_data_func)(sensors_event_t *, const measure_t), File *file) {
   // Stores a single sample from the sensor.
   sensors_event_t data;
   bno_single_sample(&data);
 
-  // The action is only to be performed on acceleration.
-  // Please refactor this later.
-  if (measure_no == M_LINEARACCEL) {
-    on_data_func(&data);
-  }
+  on_data_func(&data, measure_no);
 
   measure_no = measure_no + 1;
   if (measure_no == M_GRAVITY) {

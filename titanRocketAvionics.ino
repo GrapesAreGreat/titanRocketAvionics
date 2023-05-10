@@ -5,6 +5,9 @@
 #include "data_logging.hpp"
 #include "buzzer.hpp"
 
+// This entire system could be converted into an event driven state machine.
+// Future maintainers should consider this possibility. 
+
 #define TIMER2A_TCCR2A_ENABLE_BITS _BV(COM2A1)
 
 // 69980.62 PA (9889.63ft) - 70000 PA (9882.37ft) = -19.38 PA
@@ -16,6 +19,10 @@
 // Mojave new area elevation is 740 m (2428ft) ~ 92744.77
 // Addition of 1000ft for elevation of 3428ft ~ 89386.67
 #define PA_ABOVE_1000_FT_PLUS_GROUND_LEVEL 89386.67
+
+// How much deviation from 0 degrees is allowed for the board to be considered 
+// facing upwards and to enter flight operation mode?
+#define UPRIGHT_POSITION_DEVIATION_TOLERANCE_DEGREES 20.0
 
 File file;
 
@@ -32,6 +39,7 @@ struct chute_fire_data {
   bool vertical_acceleration_is_downward;
   bool pressure_greater_than_ground_plus_1000_ft;
   double last_pressure;
+  bool is_device_upright;
 } fdata;
 
 bool fresh_bno_data = false;
@@ -83,6 +91,18 @@ void setup() {
   // Initialize fdata.
   fdata.increasing_pressure_values_count = 0;
   fdata.last_pressure = 101325.0;
+  fdata.is_device_upright = false;
+
+  // Do not enter flight mode until the device is facing upright.
+  while (!fdata.is_device_upright) {
+    // Manually poll BNO055 for orientation data.
+    bno_logic_tick(bno_on_data, &file);
+  }
+
+  // Three short buzzer pulses indicate flight mode is activating.
+  pulse_buzzer(500);
+  pulse_buzzer(500);
+  pulse_buzzer(500);
 
   start_timer0A();
 }
@@ -109,20 +129,43 @@ void bmp5_on_data(bmp5_sensor_data *data) {
   #endif
 }
 
-void bno_on_data(sensors_event_t *data) {
-  // This callback only triggers on acceleration data.
-  fdata.vertical_acceleration_is_downward = data->acceleration.x < -0.7; // Slightly smaller than 0 for better stability at true 0.
+void bno_on_data(sensors_event_t *data, const measure_t data_type) {
+  switch (data_type) {
 
-  #ifdef PRINT_VERBOSE
-  Serial.print(F("Raw Vacc: x="));
-  Serial.print(data->acceleration.x);
-  Serial.print(" y=");
-  Serial.print(data->acceleration.y);
-  Serial.print(" z=");
-  Serial.print(data->acceleration.z);
-  Serial.print(F(" Vacc downward: "));
-  Serial.println(fdata.vertical_acceleration_is_downward);
-  #endif
+    case M_ACCELEROMETER:
+      // Slightly smaller than 0 for better stability at true 0.
+      fdata.vertical_acceleration_is_downward = data->acceleration.x < -1.0; 
+
+      #ifdef PRINT_VERBOSE
+      Serial.print(F("Raw Vacc: x="));
+      Serial.print(data->acceleration.x);
+      Serial.print(" y=");
+      Serial.print(data->acceleration.y);
+      Serial.print(" z=");
+      Serial.print(data->acceleration.z);
+      Serial.print(F(" Vacc downward: "));
+      Serial.println(fdata.vertical_acceleration_is_downward);
+      #endif
+
+      break;
+    case M_GYROSCOPE:
+      // Will want to convert this into a quaterion rather than euler angles 
+      // for more sophisticated applications to avoid gimball lock.
+      // Yes, the measurements are in degrees.
+      fdata.is_device_upright = 
+        data->orientation.x <= UPRIGHT_POSITION_DEVIATION_TOLERANCE_DEGREES &&
+        data->orientation.x >= -UPRIGHT_POSITION_DEVIATION_TOLERANCE_DEGREES;
+
+      #ifdef PRINT_VERBOSE
+      Serial.print(F("X orientation: "));
+      Serial.println(F(data->orientation.x));
+      #endif
+
+      break;
+    default:
+      break;
+  }
+
 }
 
 void test_if_chutes_fire() {
@@ -174,6 +217,11 @@ void loop() {
 
   if (did_write_file && file) {
     file.flush();
+  }
+
+  if (!file) {
+    file = SD.open(F("df.txt"), FILE_WRITE);
+    Serial.println(F("SD ejection detected and mitigated."));
   }
 }
 
