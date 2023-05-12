@@ -22,7 +22,7 @@
 
 // How much deviation from 0 degrees is allowed for the board to be considered 
 // facing upwards and to enter flight operation mode?
-#define UPRIGHT_POSITION_DEVIATION_TOLERANCE_DEGREES 20.0
+#define UPRIGHT_POSITION_DEVIATION_TOLERANCE_DEGREES 15.0
 
 File file;
 
@@ -39,6 +39,7 @@ struct chute_fire_data {
   bool vertical_acceleration_is_downward;
   bool pressure_greater_than_ground_plus_1000_ft;
   double last_pressure;
+  float y_orientation;
   bool is_device_upright;
 } fdata;
 
@@ -91,6 +92,7 @@ void setup() {
   // Initialize fdata.
   fdata.increasing_pressure_values_count = 0;
   fdata.last_pressure = 101325.0;
+  fdata.y_orientation = 0.0f;
   fdata.is_device_upright = false;
 
   // Do not enter flight mode until the device is facing upright.
@@ -152,13 +154,14 @@ void bno_on_data(sensors_event_t *data, const measure_t data_type) {
       // Will want to convert this into a quaterion rather than euler angles 
       // for more sophisticated applications to avoid gimball lock.
       // Yes, the measurements are in degrees.
+      fdata.y_orientation += data->orientation.y;
       fdata.is_device_upright = 
-        data->orientation.x <= UPRIGHT_POSITION_DEVIATION_TOLERANCE_DEGREES &&
-        data->orientation.x >= -UPRIGHT_POSITION_DEVIATION_TOLERANCE_DEGREES;
+        fdata.y_orientation <= 90.0 + UPRIGHT_POSITION_DEVIATION_TOLERANCE_DEGREES &&
+        fdata.y_orientation >= 90.0 - UPRIGHT_POSITION_DEVIATION_TOLERANCE_DEGREES;
 
       #ifdef PRINT_VERBOSE
-      Serial.print(F("X orientation: "));
-      Serial.println(F(data->orientation.x));
+      Serial.print(F("Y orientation: "));
+      Serial.println(fdata.y_orientation);
       #endif
 
       break;
@@ -166,6 +169,12 @@ void bno_on_data(sensors_event_t *data, const measure_t data_type) {
       break;
   }
 
+}
+
+void hard_sd_file_reset() {
+  file.close();
+  logger_reset();
+  file = SD.open(F("df.txt"), FILE_WRITE);
 }
 
 void test_if_chutes_fire() {
@@ -176,6 +185,7 @@ void test_if_chutes_fire() {
   {
     fire_drogue_signal_on(&file);
     did_drogue_fire = true;
+    hard_sd_file_reset();
   }
 
   // Testing if main chute should fire.  
@@ -186,6 +196,7 @@ void test_if_chutes_fire() {
   {
     fire_chute_signal_on(&file);
     did_chute_fire = true;
+    hard_sd_file_reset();
   }
 }
 
@@ -217,11 +228,6 @@ void loop() {
 
   if (did_write_file && file) {
     file.flush();
-  }
-
-  if (!file) {
-    file = SD.open(F("df.txt"), FILE_WRITE);
-    Serial.println(F("SD ejection detected and mitigated."));
   }
 }
 
