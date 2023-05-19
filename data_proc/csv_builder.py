@@ -3,7 +3,7 @@
 import csv
 import re
 
-print("Enter the name of the input file: ", newline='')
+print("Enter the name of the input file: ", sep='')
 
 data_file_name = input().strip()
 data_file = open(data_file_name, 'r', newline='\n')
@@ -51,7 +51,7 @@ for line in data_file.readlines():
 
     if (match):
         tp_writer.writerow([ 
-            str(temp_pressure_current_time), 
+            str(round(temp_pressure_current_time, 3)), 
             match.group(1), 
             match.group(2) 
         ])
@@ -68,7 +68,7 @@ for line in data_file.readlines():
         ay += dy
         az += dz
         accel_writer.writerow([
-            str(bno_current_time),
+            str(round(bno_current_time, 3)),
             str(dx),
             str(dy),
             str(dz),
@@ -82,7 +82,7 @@ for line in data_file.readlines():
 
     if (match):
         mag_writer.writerow([
-            str(bno_current_time),
+            str(round(bno_current_time, 3)),
             match.group(1),
             match.group(2),
             match.group(3)
@@ -99,7 +99,7 @@ for line in data_file.readlines():
         ry += dy
         rz += dz
         gyro_writer.writerow([
-            str(bno_current_time),
+            str(round(bno_current_time, 3)),
             str(dx),
             str(dy),
             str(dz),
@@ -113,7 +113,7 @@ for line in data_file.readlines():
 
     if (match):
         orient_writer.writerow([
-            str(bno_current_time),
+            str(round(bno_current_time, 3)),
             match.group(1),
             match.group(2),
             match.group(3)
@@ -123,8 +123,8 @@ for line in data_file.readlines():
     match = re.search(r'Linear: x= (-?[\d]+.?[\d]*) y= (-?[\d]+.?[\d]*) z= (-?[\d]+.?[\d]*)', line)
 
     if (match):
-        orient_writer.writerow([
-            str(bno_current_time),
+        linear_writer.writerow([
+            str(round(bno_current_time, 3)),
             match.group(1),
             match.group(2),
             match.group(3)
