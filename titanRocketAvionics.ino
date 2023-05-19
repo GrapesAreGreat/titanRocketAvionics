@@ -39,8 +39,6 @@ struct chute_fire_data {
   bool vertical_acceleration_is_downward;
   bool pressure_greater_than_ground_plus_1000_ft;
   double last_pressure;
-  float y_orientation;
-  bool is_device_upright;
 } fdata;
 
 bool fresh_bno_data = false;
@@ -92,19 +90,6 @@ void setup() {
   // Initialize fdata.
   fdata.increasing_pressure_values_count = 0;
   fdata.last_pressure = 101325.0;
-  fdata.y_orientation = 0.0f;
-  fdata.is_device_upright = false;
-
-  // Do not enter flight mode until the device is facing upright.
-  while (!fdata.is_device_upright) {
-    // Manually poll BNO055 for orientation data.
-    bno_logic_tick(bno_on_data, &file);
-  }
-
-  // Three short buzzer pulses indicate flight mode is activating.
-  pulse_buzzer(500);
-  pulse_buzzer(500);
-  pulse_buzzer(500);
 
   start_timer0A();
 }
@@ -147,21 +132,6 @@ void bno_on_data(sensors_event_t *data, const measure_t data_type) {
       Serial.print(data->acceleration.z);
       Serial.print(F(" Vacc downward: "));
       Serial.println(fdata.vertical_acceleration_is_downward);
-      #endif
-
-      break;
-    case M_GYROSCOPE:
-      // Will want to convert this into a quaterion rather than euler angles 
-      // for more sophisticated applications to avoid gimball lock.
-      // Yes, the measurements are in degrees.
-      fdata.y_orientation += data->orientation.y;
-      fdata.is_device_upright = 
-        fdata.y_orientation <= 90.0 + UPRIGHT_POSITION_DEVIATION_TOLERANCE_DEGREES &&
-        fdata.y_orientation >= 90.0 - UPRIGHT_POSITION_DEVIATION_TOLERANCE_DEGREES;
-
-      #ifdef PRINT_VERBOSE
-      Serial.print(F("Y orientation: "));
-      Serial.println(fdata.y_orientation);
       #endif
 
       break;
@@ -226,12 +196,12 @@ void loop() {
     fresh_bno_data = false;
   }
 
-  if (did_write_file && file) {
+  if (did_write_file) {
     file.flush();
   }
 }
 
-// Timer0A compare interrupt service.
+// Timer2A compare interrupt service.
 ISR(TIMER2_COMPA_vect) {
   // This interrupt fires approximately every 10.24 ms.
   iflags.do_pyro_tick = true;
