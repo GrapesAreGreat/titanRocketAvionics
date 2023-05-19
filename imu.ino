@@ -84,52 +84,55 @@ void bno_log_event(sensors_event_t *event, File *file) {
   if (event == NULL || file == NULL) {
     return;
   }
+
+  file->print(F("T: "));
+  file->print(get_systick());
   
   double x = -1000000, y = -1000000 , z = -1000000; // Dumb values, easy to spot problem.
   if (event->type == SENSOR_TYPE_ACCELEROMETER) {
-    file->print(F("Accl:"));
+    file->print(F(" Accl:"));
     x = event->acceleration.x;
     y = event->acceleration.y;
     z = event->acceleration.z;
   }
   else if (event->type == SENSOR_TYPE_ORIENTATION) {
-    file->print(F("Orient:"));
+    file->print(F(" Orient:"));
     x = event->orientation.x;
     y = event->orientation.y;
     z = event->orientation.z;
   }
   else if (event->type == SENSOR_TYPE_MAGNETIC_FIELD) {
-    file->print(F("Mag:"));
+    file->print(F(" Mag:"));
     x = event->magnetic.x;
     y = event->magnetic.y;
     z = event->magnetic.z;
   }
   else if (event->type == SENSOR_TYPE_GYROSCOPE) {
-    file->print(F("Gyro:"));
+    file->print(F(" Gyro:"));
     x = event->gyro.x;
     y = event->gyro.y;
     z = event->gyro.z;
   }
   else if (event->type == SENSOR_TYPE_ROTATION_VECTOR) {
-    file->print(F("Rot:"));
+    file->print(F(" Rot:"));
     x = event->gyro.x;
     y = event->gyro.y;
     z = event->gyro.z;
   }
   else if (event->type == SENSOR_TYPE_LINEAR_ACCELERATION) {
-    file->print(F("Linear:"));
+    file->print(F(" Linear:"));
     x = event->acceleration.x;
     y = event->acceleration.y;
     z = event->acceleration.z;
   }
   else if (event->type == SENSOR_TYPE_GRAVITY) {
-    file->print(F("Gravity:"));
+    file->print(F(" Gravity:"));
     x = event->acceleration.x;
     y = event->acceleration.y;
     z = event->acceleration.z;
   }
   else {
-    file->print(F("Unk:"));
+    file->print(F(" Unk:"));
   }
 
   file->print(F(" x= "));

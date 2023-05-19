@@ -4,6 +4,7 @@
 #include "imu.hpp"
 #include "data_logging.hpp"
 #include "buzzer.hpp"
+#include "systick.hpp"
 
 // This entire system could be converted into an event driven state machine.
 // Future maintainers should consider this possibility. 
@@ -31,6 +32,7 @@ struct interrupt_flags {
   bool do_pyro_tick;
   bool do_bno_tick;
   bool do_bmp_tick;
+  bool do_sd_reset_tick;
 } iflags;
 
 #pragma pack(1)
@@ -46,6 +48,9 @@ bool fresh_bmp_data = false;
 
 bool did_drogue_fire = false;
 bool did_chute_fire = false;
+
+const char SD_reset_sample_rate = 98; // * 10.24 ms
+char SD_reset_counter = 0;
 
 void setup_timers() {
   // TIMER2A Configuration.
@@ -199,6 +204,21 @@ void loop() {
   if (did_write_file) {
     file.flush();
   }
+
+  if (iflags.do_sd_reset_tick) {
+    hard_sd_file_reset();
+    iflags.do_sd_reset_tick = false;
+  }
+}
+
+bool sd_reset_should_tick() {
+  if (SD_reset_counter == SD_reset_sample_rate) {
+    SD_reset_counter = 0;
+    return true;
+  } else {
+    SD_reset_counter++;
+    return false;
+  }
 }
 
 // Timer2A compare interrupt service.
@@ -207,4 +227,6 @@ ISR(TIMER2_COMPA_vect) {
   iflags.do_pyro_tick = true;
   iflags.do_bmp_tick = bmp581_should_tick();
   iflags.do_bno_tick = bno_should_tick();
+  iflags.do_sd_reset_tick = sd_reset_should_tick();
+  tick_systick();
 }

@@ -10,7 +10,6 @@
 void logger_reset() {
   SD.end();
   SD.begin(CHIP_SELECT_PIN);
-  Serial.println(F("Reseting SD"));
 }
 
 void logger_setup() {

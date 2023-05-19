@@ -1,6 +1,7 @@
 #include "bmp581.hpp"
 
 #include "buzzer.hpp"
+#include "systick.hpp"
 
 const int BMP_SAMPLE_RATE = 5; // * 10.24 ms
 // Offset the logic tick from other sensors.
@@ -40,7 +41,9 @@ void bmp581_log_datum(bmp5_sensor_data *data, File *file) {
       return;  
     }
     
-    file->print(F("C: "));
+    file->print(F("T: "));
+    file->print(get_systick());
+    file->print(F(" C: "));
     file->print(data->temperature);
     file->print(F(" Pa: "));
     file->println(data->pressure);
