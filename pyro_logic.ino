@@ -49,8 +49,6 @@ void pyro_logic_tick() {
 }
 
 void fire_drogue_signal_on(File *file) {
-  digitalWrite(BUZZER_PIN, HIGH);
-  Serial.println(F("Firing drogue pyro signal"));
   file->print(F("T: "));
   file->print(get_systick());
   file->println(F(" Firing drogue pyro signal"));
@@ -59,25 +57,18 @@ void fire_drogue_signal_on(File *file) {
 }
 
 void fire_drogue_signal_off() {
-  digitalWrite(BUZZER_PIN, LOW);
-  Serial.println(F("Stopping drogue pyro signal"));
   analogWrite(DROGUE_PWM_PIN, 0);
   drogue_signal_on = false;
 }
 
 void fire_chute_signal_on(File *file) {
-  digitalWrite(BUZZER_PIN, HIGH);
-  Serial.println(F("Firing chute pyro signal"));
   file->print(F("T: "));
   file->print(get_systick());
   file->println(F(" Firing chute pyro signal"));
-  analogWrite(CHUTE_PWM_PIN, 77);
   chute_signal_on = true;
 }
 
 void fire_chute_signal_off() {
-  digitalWrite(BUZZER_PIN, LOW);
-  Serial.println(F("Stopping chute pyro signal"));
   analogWrite(CHUTE_PWM_PIN, 0);
   chute_signal_on = false;
 }

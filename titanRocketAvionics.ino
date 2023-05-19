@@ -49,7 +49,7 @@ bool fresh_bmp_data = false;
 bool did_drogue_fire = false;
 bool did_chute_fire = false;
 
-const char SD_reset_sample_rate = 98; // * 10.24 ms
+const char SD_reset_sample_rate = 196; // * 10.24 ms
 char SD_reset_counter = 0;
 
 void setup_timers() {
@@ -160,7 +160,6 @@ void test_if_chutes_fire() {
   {
     fire_drogue_signal_on(&file);
     did_drogue_fire = true;
-    hard_sd_file_reset();
   }
 
   // Testing if main chute should fire.  
@@ -171,7 +170,6 @@ void test_if_chutes_fire() {
   {
     fire_chute_signal_on(&file);
     did_chute_fire = true;
-    hard_sd_file_reset();
   }
 }
 
