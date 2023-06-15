@@ -28,7 +28,7 @@
 
 #define W25N512GV_DEV_ID          0xAA20
 #define W25N512GV_MAX_PAGE        32768
-#define W25N_MAX_COLUMN           2048
+#define W25N_MAX_COLUMN           2112
 
 class W25N512 {
 private:

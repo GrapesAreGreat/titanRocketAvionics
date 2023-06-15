@@ -15,7 +15,7 @@
 #define PRESSURE_DELTA (-19.38)
 
 // Define this to log data through the serial monitor.
-#undef PRINT_VERBOSE 1
+#define PRINT_VERBOSE 1
 
 // Mojave new area elevation is 740 m (2428ft) ~ 92744.77
 // Addition of 1000ft for elevation of 3428ft ~ 89386.67
@@ -28,7 +28,6 @@ struct interrupt_flags {
   bool do_pyro_tick;
   bool do_bno_tick;
   bool do_bmp_tick;
-  bool do_flash_tick;
 } iflags;
 
 #pragma pack(1)
@@ -83,6 +82,7 @@ void setup() {
 
   // Clear the flash memory. Takes about 30 seconds.
   logger.erase_all_and_reset();
+  delay(30000);
   pulse_buzzer(1000);
 
   setup_timers();
@@ -162,16 +162,6 @@ void test_if_chutes_fire() {
   }
 }
 
-bool flash_should_tick() {
-  if (flash_flush_counter < flash_flush_rate) {
-    flash_flush_counter++;
-    return false;
-  } else {
-    flash_flush_counter = 0;
-    return true;
-  }
-}
-
 void loop() {
   if (iflags.do_pyro_tick) {
     pyro_logic_tick();
@@ -195,11 +185,6 @@ void loop() {
     fresh_bmp_data = false;
     fresh_bno_data = false;
   }
-
-  if (iflags.do_flash_tick) {
-    logger.flush();
-    iflags.do_flash_tick = false;
-  }
 }
 
 // Timer2A compare interrupt service.
@@ -208,6 +193,5 @@ ISR(TIMER2_COMPA_vect) {
   iflags.do_pyro_tick = true;
   iflags.do_bmp_tick = bmp581_should_tick();
   iflags.do_bno_tick = bno_should_tick();
-  iflags.do_flash_tick = flash_should_tick();
   tick_systick();
 }
