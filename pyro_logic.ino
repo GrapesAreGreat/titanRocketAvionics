@@ -48,10 +48,10 @@ void pyro_logic_tick() {
   }
 }
 
-void fire_drogue_signal_on(File *file) {
-  file->print(F("T: "));
-  file->print(get_systick());
-  file->println(F(" Firing drogue pyro signal"));
+void fire_drogue_signal_on(FlashLogger *logger) {
+  char buffer[40];
+  sprintf(buffer, "T: %d Firing drogue pyro signal\n", get_systick());
+  logger->log_string(buffer);
   analogWrite(DROGUE_PWM_PIN, 77);
   drogue_signal_on = true;
 }
@@ -61,10 +61,10 @@ void fire_drogue_signal_off() {
   drogue_signal_on = false;
 }
 
-void fire_chute_signal_on(File *file) {
-  file->print(F("T: "));
-  file->print(get_systick());
-  file->println(F(" Firing chute pyro signal"));
+void fire_chute_signal_on(FlashLogger *logger) {
+  char buffer[40];
+  sprintf(buffer, "T: %ud Firing chute pyro signal\n", get_systick());
+  logger->log_string(buffer);
   chute_signal_on = true;
 }
 

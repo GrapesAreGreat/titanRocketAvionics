@@ -27,7 +27,7 @@ measure_t measure_no = 0;
 
 // Check I2C device address and correct line below (by default address is 0x29 or 0x28)
 //                                    id, address
-Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28, &Wire);
+Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x29, &Wire);
 
 void bno_setup() {
   while (!bno.begin()) {
@@ -37,15 +37,16 @@ void bno_setup() {
   
   Serial.println(F("BNO success"));
 
-  uint8_t system, gyro, accel, mag = 0;
+  unsigned char system, gyro, accel, mag = 0;
   bno.getCalibration(&system, &gyro, &accel, &mag);
+
   Serial.print(F("Cal: Sys="));
   Serial.print(system);
-  Serial.print(F(" Gyro="));
+  Serial.print(" Gyro=");
   Serial.print(gyro);
-  Serial.print(F(" Accel="));
+  Serial.print(" Accel=");
   Serial.print(accel);
-  Serial.print(F(" Mag="));
+  Serial.print(" Mag=");
   Serial.println(mag);
 
   delay(10);
@@ -80,67 +81,70 @@ void bno_single_sample(sensors_event_t *data) {
   bno.getEvent(data, type);
 }
 
-void bno_log_event(sensors_event_t *event, File *file) {
-  if (event == NULL || file == NULL) {
+void bno_log_event(sensors_event_t *event, FlashLogger *logger) {
+  if (event == NULL || logger == NULL) {
     return;
   }
 
-  file->print(F("T: "));
-  file->print(get_systick());
+  char str_type_buff[10];
+  char x_buffer[10];
+  char y_buffer[10];
+  char z_buffer[10];
   
   double x = -1000000, y = -1000000 , z = -1000000; // Dumb values, easy to spot problem.
   if (event->type == SENSOR_TYPE_ACCELEROMETER) {
-    file->print(F(" Accl:"));
+    (void) strcpy(str_type_buff, "Accl");
     x = event->acceleration.x;
     y = event->acceleration.y;
     z = event->acceleration.z;
   }
   else if (event->type == SENSOR_TYPE_ORIENTATION) {
-    file->print(F(" Orient:"));
+    (void) strcpy(str_type_buff, "Orient");
     x = event->orientation.x;
     y = event->orientation.y;
     z = event->orientation.z;
   }
   else if (event->type == SENSOR_TYPE_MAGNETIC_FIELD) {
-    file->print(F(" Mag:"));
+    (void) strcpy(str_type_buff, "Mag");
     x = event->magnetic.x;
     y = event->magnetic.y;
     z = event->magnetic.z;
   }
   else if (event->type == SENSOR_TYPE_GYROSCOPE) {
-    file->print(F(" Gyro:"));
+    (void) strcpy(str_type_buff, "Gyro");
     x = event->gyro.x;
     y = event->gyro.y;
     z = event->gyro.z;
   }
   else if (event->type == SENSOR_TYPE_ROTATION_VECTOR) {
-    file->print(F(" Rot:"));
+    (void) strcpy(str_type_buff, "Rot");
     x = event->gyro.x;
     y = event->gyro.y;
     z = event->gyro.z;
   }
   else if (event->type == SENSOR_TYPE_LINEAR_ACCELERATION) {
-    file->print(F(" Linear:"));
+    (void) strcpy(str_type_buff, "Linear");
     x = event->acceleration.x;
     y = event->acceleration.y;
     z = event->acceleration.z;
   }
   else if (event->type == SENSOR_TYPE_GRAVITY) {
-    file->print(F(" Gravity:"));
+    (void) strcpy(str_type_buff, "Gravity");
     x = event->acceleration.x;
     y = event->acceleration.y;
     z = event->acceleration.z;
   }
   else {
-    file->print(F(" Unk:"));
+    (void) strcpy(str_type_buff, "Unk");
   }
 
-  file->print(F(" x= "));
-  file->print(x);
-  file->print(F(" y= "));
-  file->print(y);
-  file->print(F(" z= "));
-  file->println(z);
+  char buffer[64];
+  dtostrf(x, 4, 2, x_buffer);
+  dtostrf(y, 4, 2, y_buffer);
+  dtostrf(z, 4, 2, z_buffer);
+
+  sprintf(buffer, "T: %u %s: x= %s y= %s z= %s\n", get_systick(), str_type_buff, x_buffer, y_buffer, z_buffer);
+  logger->log_string(buffer);
 }
 
 bool bno_should_tick() {
@@ -153,7 +157,7 @@ bool bno_should_tick() {
   }
 }
 
-void bno_logic_tick(void (*on_data_func)(sensors_event_t *, const measure_t), File *file) {
+void bno_logic_tick(void (*on_data_func)(sensors_event_t *, const measure_t), FlashLogger *logger) {
   // Stores a single sample from the sensor.
   sensors_event_t data;
   bno_single_sample(&data);
@@ -165,5 +169,5 @@ void bno_logic_tick(void (*on_data_func)(sensors_event_t *, const measure_t), Fi
     measure_no = 0;
   }
   
-  bno_log_event(&data, file);
+  bno_log_event(&data, logger);
 }

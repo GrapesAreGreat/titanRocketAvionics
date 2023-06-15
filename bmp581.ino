@@ -36,17 +36,18 @@ bmp5_sensor_data bmp581_single_sample() {
   return data;
 }
 
-void bmp581_log_datum(bmp5_sensor_data *data, File *file) {
-    if (data == NULL || file == NULL) {
-      return;  
+void bmp581_log_datum(bmp5_sensor_data *data, FlashLogger *logger) {
+    if (data == NULL || logger == NULL) {
+      return;
     }
-    
-    file->print(F("T: "));
-    file->print(get_systick());
-    file->print(F(" C: "));
-    file->print(data->temperature);
-    file->print(F(" Pa: "));
-    file->println(data->pressure);
+
+    char buffer[60];
+    char temp_buffer[12];
+    char pres_buffer[12];
+    dtostrf(data->temperature, 4, 4, temp_buffer);
+    dtostrf(data->pressure, 4, 4, pres_buffer);
+    sprintf(buffer, "T: %u C: %s Pa: %s\n", get_systick(), temp_buffer, pres_buffer);
+    logger->log_string(buffer);
 }
 
 bool bmp581_should_tick() {
@@ -59,8 +60,8 @@ bool bmp581_should_tick() {
   }
 }
 
-void bmp581_logic_tick(void (*on_data_func)(bmp5_sensor_data *), File *file) {
+void bmp581_logic_tick(void (*on_data_func)(bmp5_sensor_data *), FlashLogger *logger) {
   bmp5_sensor_data data = bmp581_single_sample();
   on_data_func(&data);
-  bmp581_log_datum(&data, file);
+  bmp581_log_datum(&data, logger);
 }

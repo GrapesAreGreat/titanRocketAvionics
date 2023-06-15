@@ -21,18 +21,14 @@
 // Addition of 1000ft for elevation of 3428ft ~ 89386.67
 #define PA_ABOVE_1000_FT_PLUS_GROUND_LEVEL 89386.67
 
-// How much deviation from 0 degrees is allowed for the board to be considered 
-// facing upwards and to enter flight operation mode?
-#define UPRIGHT_POSITION_DEVIATION_TOLERANCE_DEGREES 15.0
-
-File file;
+FlashLogger logger;
 
 #pragma pack(1)
 struct interrupt_flags {
   bool do_pyro_tick;
   bool do_bno_tick;
   bool do_bmp_tick;
-  bool do_sd_reset_tick;
+  bool do_flash_tick;
 } iflags;
 
 #pragma pack(1)
@@ -49,8 +45,8 @@ bool fresh_bmp_data = false;
 bool did_drogue_fire = false;
 bool did_chute_fire = false;
 
-const char SD_reset_sample_rate = 196; // * 10.24 ms
-char SD_reset_counter = 0;
+const uint8_t flash_flush_rate = 97; // * 10.24 ms
+uint8_t flash_flush_counter = 0;
 
 void setup_timers() {
   // TIMER2A Configuration.
@@ -74,23 +70,22 @@ void setup() {
   Serial.begin(115200);
 
   init_buzzer();
-  pulse_buzzer(1000);
 
-  logger_setup();
+  logger.init();
   pyro_logic_init();
   bmp581_setup();
   bno_setup();
 
-  setup_timers();
+  // Wait ten seconds so data is not eliminated immediately.
+  // pulse_buzzer(1000);
+  // delay(10000);
+  // pulse_buzzer(1000);
 
-  file = SD.open(F("df.txt"), FILE_WRITE);
-  while (!file) {
-    Serial.println(F("Failed to open file"));
-    file = SD.open(F("data_file.txt"), FILE_WRITE);
-    delay(1000);
-  }
-  file.println(F("start"));
-  file.flush();
+  // Clear the flash memory. Takes about 30 seconds.
+  logger.erase_all_and_reset();
+  // pulse_buzzer(1000);
+
+  setup_timers();
 
   // Initialize fdata.
   fdata.increasing_pressure_values_count = 0;
@@ -146,19 +141,13 @@ void bno_on_data(sensors_event_t *data, const measure_t data_type) {
 
 }
 
-void hard_sd_file_reset() {
-  file.close();
-  logger_reset();
-  file = SD.open(F("df.txt"), FILE_WRITE);
-}
-
 void test_if_chutes_fire() {
   // Testing if drogue chute should fire.
   const bool pressure_increased_eight_times = fdata.increasing_pressure_values_count >= 8;
   
   if (!did_drogue_fire && pressure_increased_eight_times) 
   {
-    fire_drogue_signal_on(&file);
+    fire_drogue_signal_on(&logger);
     did_drogue_fire = true;
   }
 
@@ -168,27 +157,35 @@ void test_if_chutes_fire() {
       fdata.pressure_greater_than_ground_plus_1000_ft
      ) 
   {
-    fire_chute_signal_on(&file);
+    fire_chute_signal_on(&logger);
     did_chute_fire = true;
   }
 }
 
-void loop() {
-  const bool did_write_file = iflags.do_bmp_tick | iflags.do_bno_tick;
+bool flash_should_tick() {
+  if (flash_flush_counter < flash_flush_rate) {
+    flash_flush_counter++;
+    return false;
+  } else {
+    flash_flush_counter = 0;
+    return true;
+  }
+}
 
+void loop() {
   if (iflags.do_pyro_tick) {
     pyro_logic_tick();
     iflags.do_pyro_tick = false;
   }
 
   if (iflags.do_bmp_tick) {
-    bmp581_logic_tick(bmp5_on_data, &file);
+    bmp581_logic_tick(bmp5_on_data, &logger);
     fresh_bmp_data = true;
     iflags.do_bmp_tick = false;
   }
 
   if (iflags.do_bno_tick) {
-    bno_logic_tick(bno_on_data, &file);
+    bno_logic_tick(bno_on_data, &logger);
     fresh_bno_data = true;
     iflags.do_bno_tick = false;
   }
@@ -199,23 +196,9 @@ void loop() {
     fresh_bno_data = false;
   }
 
-  if (did_write_file) {
-    file.flush();
-  }
-
-  if (iflags.do_sd_reset_tick) {
-    hard_sd_file_reset();
-    iflags.do_sd_reset_tick = false;
-  }
-}
-
-bool sd_reset_should_tick() {
-  if (SD_reset_counter == SD_reset_sample_rate) {
-    SD_reset_counter = 0;
-    return true;
-  } else {
-    SD_reset_counter++;
-    return false;
+  if (iflags.do_flash_tick) {
+    logger.flush();
+    iflags.do_flash_tick = false;
   }
 }
 
@@ -225,6 +208,6 @@ ISR(TIMER2_COMPA_vect) {
   iflags.do_pyro_tick = true;
   iflags.do_bmp_tick = bmp581_should_tick();
   iflags.do_bno_tick = bno_should_tick();
-  iflags.do_sd_reset_tick = sd_reset_should_tick();
+  iflags.do_flash_tick = flash_should_tick();
   tick_systick();
 }
