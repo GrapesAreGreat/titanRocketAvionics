@@ -77,13 +77,13 @@ void setup() {
   bno_setup();
 
   // Wait ten seconds so data is not eliminated immediately.
-  // pulse_buzzer(1000);
-  // delay(10000);
-  // pulse_buzzer(1000);
+  pulse_buzzer(1000);
+  delay(10000);
+  pulse_buzzer(1000);
 
   // Clear the flash memory. Takes about 30 seconds.
   logger.erase_all_and_reset();
-  // pulse_buzzer(1000);
+  pulse_buzzer(1000);
 
   setup_timers();
 
