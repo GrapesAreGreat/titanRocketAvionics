@@ -40,8 +40,6 @@ void FlashLogger::erase_all_and_reset() {
 }
 
 void FlashLogger::log_string(char *s) {
-  Serial.print(F("Attempting to log "));
-  Serial.println(s);
   this->log_string(s, strlen(s));
 }
  
@@ -71,7 +69,6 @@ void FlashLogger::log_string(char *s, const size_t s_len) {
 void FlashLogger::flush() {
   this->flash.programExecute(currentPageAddress);
   this->flash.blockWIP();
-  Serial.println(F("Flushed log"));
 }
 
 // This is really stupid, but works with high probability in our application.
