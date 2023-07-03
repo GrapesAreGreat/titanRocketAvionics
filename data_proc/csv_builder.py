@@ -3,6 +3,18 @@
 import csv
 import re
 
+current_rollover = 0
+last_time = 0
+tick_time = 10.24 # ms
+
+def convert_time(time_ticks):
+    global current_rollover, last_time, tick_time
+    if last_time < time_ticks:
+        current_rollover += 1
+    converted_time = tick_time * time_ticks + (65535 * current_rollover)
+    last_time = time_ticks
+    return converted_time
+
 print("Enter the name of the input file: ", sep='')
 
 data_file_name = input().strip()
@@ -41,7 +53,7 @@ for line in data_file.readlines():
 
     if (match):
         tp_writer.writerow([ 
-            match.group(1), 
+            convert_time(int(match.group(1))), 
             match.group(2), 
             match.group(3) 
         ])
@@ -51,7 +63,7 @@ for line in data_file.readlines():
 
     if (match):
         accel_writer.writerow([
-            match.group(1),
+            convert_time(int(match.group(1))),
             match.group(2),
             match.group(3),
             match.group(4)
@@ -62,7 +74,7 @@ for line in data_file.readlines():
 
     if (match):
         mag_writer.writerow([
-            match.group(1),
+            convert_time(int(match.group(1))),
             match.group(2),
             match.group(3),
             match.group(4)
@@ -73,7 +85,7 @@ for line in data_file.readlines():
 
     if (match):
         gyro_writer.writerow([
-            match.group(1),
+            convert_time(int(match.group(1))),
             match.group(2),
             match.group(3),
             match.group(4)
@@ -84,7 +96,7 @@ for line in data_file.readlines():
 
     if (match):
         orient_writer.writerow([
-            match.group(1),
+            convert_time(int(match.group(1))),
             match.group(2),
             match.group(3),
             match.group(4)
@@ -95,7 +107,7 @@ for line in data_file.readlines():
 
     if (match):
         linear_writer.writerow([
-            match.group(1),
+            convert_time(int(match.group(1))),
             match.group(2),
             match.group(3),
             match.group(4)
@@ -105,13 +117,13 @@ for line in data_file.readlines():
     match = re.search(r'T: ([\d]+) Firing drogue pyro signal', line)
 
     if (match):
-        event_writer.writerow([ int(match.group(1)), "DROGUE" ])
+        event_writer.writerow([ convert_time(int(match.group(1))), "DROGUE" ])
         continue
 
     match = re.search(r'T: ([\d]+) Firing chute pyro signal', line)
 
     if (match):
-        event_writer.writerow([ int(match.group(1)), "MAIN" ])
+        event_writer.writerow([ convert_time(int(match.group(1))), "MAIN" ])
         continue
 
 

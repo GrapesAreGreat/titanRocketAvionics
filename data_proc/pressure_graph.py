@@ -15,13 +15,13 @@ def open_data():
     main_row = edf.loc[edf['Event'] == 'MAIN']
 
     if len(drogue_row) != 0:
-        drogue_time = float(drogue_row.iloc[0].loc['TimeTicks']) * 10.24
+        drogue_time = float(drogue_row.iloc[0].loc['TimeTicks'])
     
     if len(main_row) != 0:
-        main_time = float(main_row.iloc[0].loc['TimeTicks']) * 10.24
+        main_time = float(main_row.iloc[0].loc['TimeTicks'])
 
     df = pd.read_csv('temp_pressure.csv')
-    df['TimeMS'] = df['TimeTicks'] * 10.24
+    df['TimeMS'] = df['TimeTicks']
 
     return df, drogue_time, main_time
 
@@ -31,7 +31,7 @@ def plot_data(df, pyro_event_time, chute_event_time):
     ax1.set_title('Test Launch: Pressure vs Time')
     ax1.set_xlabel('Time (s)')
     ax1.set_ylabel('Pressure (Pa)', color='tab:blue')
-    ax1.scatter(df['TimeMS'] / 1000, df['PressurePA'], color='tab:blue', marker='.')
+    ax1.scatter((df['TimeMS'] / 1000.0), df['PressurePA'], color='tab:blue', marker='.')
     ax1.tick_params(axis='y', labelcolor='tab:blue')
 
     if pyro_event_time is not None:
